@@ -132,7 +132,24 @@ input[type="range"]::-moz-range-track{height:6px;border-radius:3px;background:va
 input[type="range"]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:var(--accent);border:3px solid var(--panel)}
 input[type="range"]:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:8px}
 
-/* waveform */
+/* waveform + mixer */
+.wave-row{display:flex;gap:8px;align-items:flex-start}
+.wave-row canvas{flex:1;min-width:0}
+.mixer{flex:none;width:76px;display:flex;flex-direction:column;padding-top:26px}
+.strip{display:flex;align-items:stretch;justify-content:flex-end;gap:6px;padding:4px 0}
+.strip + .strip{border-top:1px solid var(--line)}
+.ms{display:flex;flex-direction:column;justify-content:center;gap:4px}
+.ms .btn{min-height:0;height:28px;width:32px;padding:0;font-size:.78rem;font-weight:800;border-radius:8px}
+.ms .btn.mute[aria-pressed="true"]{background:var(--rec);border-color:var(--rec);color:#fff}
+.ms .btn.solo[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.fader{position:relative;width:30px;flex:none;touch-action:none;cursor:ns-resize;border-radius:8px;-webkit-tap-highlight-color:transparent}
+.fader:focus-visible{outline:3px solid var(--accent);outline-offset:1px}
+.fader .rail,.fader .fill{position:absolute;left:50%;width:6px;margin-left:-3px;border-radius:3px}
+.fader .rail{top:7px;bottom:7px;background:var(--line)}
+.fader .fill{bottom:7px;background:var(--accent)}
+.fader .unity{position:absolute;left:4px;right:4px;height:2px;margin-bottom:-1px;background:var(--muted);opacity:.6}
+.fader .knob{position:absolute;left:50%;width:26px;height:14px;margin-left:-13px;margin-bottom:-7px;border-radius:5px;background:var(--panel);border:2px solid var(--accent);box-shadow:0 1px 3px rgba(0,0,0,.35)}
+.strip.off .fader .fill{background:var(--wave)}
 canvas{display:block;width:100%;height:170px;touch-action:none;cursor:crosshair}
 canvas.shifting{cursor:ew-resize}
 canvas.locked{cursor:default}
@@ -264,10 +281,13 @@ body.recording #tracks .trk-name{pointer-events:none;opacity:.45}
 
   <p id="msg" class="msg" role="status" aria-live="polite"></p>
 
-  <section id="card" class="card lockable" aria-label="Przebieg">
-    <canvas id="wave" aria-label="Przebieg nagrań. Przeciągnij palcem, aby zaznaczyć pętlę. Stuknij, aby przewinąć. Przeciągnij znacznik A lub B, aby go przesunąć."></canvas>
+  <section id="card" class="card" aria-label="Przebieg">
+    <div class="wave-row">
+      <canvas id="wave" aria-label="Przebieg nagrań. Przeciągnij palcem, aby zaznaczyć pętlę. Stuknij, aby przewinąć. Przeciągnij znacznik A lub B, aby go przesunąć."></canvas>
+      <div id="mixer" class="mixer" aria-label="Mikser"></div>
+    </div>
     <p id="shiftNote" class="shift-note" hidden></p>
-    <div class="readout">
+    <div class="readout lockable">
       <div class="now"><span id="now">0:00,00</span><span id="dur" class="dur">/ 0:00,00</span></div>
       <div class="marks">
         <span class="chip"><b>A</b> <span id="tA">–:––,––</span></span>
@@ -365,6 +385,7 @@ body.recording #tracks .trk-name{pointer-events:none;opacity:.45}
       <ol>
         <li><strong>Wczytaj</strong> bierze nagranie z Plików albo film z galerii, np. nagranie ekranu ze Spotify. Z filmu zostaje sam dźwięk. Niektóre aplikacje (np. Apple Music) wyciszają nagrywanie ekranu. Z Dyktafonu: stuknij nagranie, potem <strong>•••</strong> → Udostępnij → <strong>Zachowaj w Plikach</strong>.</li>
         <li><strong>Nagraj</strong> nagrywa do wybranego śladu, a pozostałe grają jako podkład. Załóż słuchawki, najlepiej przewodowe. Przy ustawionej pętli nagrywanie rusza przed A i kończy się samo po B. <strong>Wyczyść</strong> opróżnia ślad, a <strong>Usuń</strong> kasuje cały ślad.</li>
+        <li><strong>Mikser</strong> obok przebiegu: pionowy suwak ustawia głośność śladu (przesuwaj palcem w górę i w dół, kreska to 100%), <strong>M</strong> wycisza ślad, a <strong>S</strong> zostawia słyszalne tylko ślady z włączonym solo. Eksport MP3 uwzględnia te ustawienia.</li>
         <li>Ślady 2–4 przesuwasz strzałkami względem śladu 1: <strong>‹ ›</strong> o 10 ms, <strong>‹‹ ››</strong> o 100 ms. Gdy poprawiasz świeże nagranie, aplikacja zapamiętuje poprawkę i stosuje ją do kolejnych nagrań.</li>
         <li><strong>Pętla:</strong> przeciągnij palcem po przebiegu, a potem dostrój A i B przyciskami ±. Znaczniki A i B możesz też przeciągać. <strong>Kłódka</strong> blokuje pętlę i przebieg przed przypadkowym dotknięciem.</li>
         <li><strong>Tempo i transpozycja</strong> działają na wszystkie ślady. Tempo zmienia się bez zmiany wysokości dźwięku, a transpozycja bez zmiany tempa.</li>
@@ -654,8 +675,11 @@ const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 const hasContent = (s) => !!(s && s.raw);
 const content = () => slots.filter(hasContent);
 const slotById = (id) => slots.find((s) => s.id === id) || null;
-const newSlot = () => ({ id: nextId++, name: '', raw: null, dur: 0, vol: 1, offset: 0, max: 0, src: null, open: false });
+const newSlot = () => ({ id: nextId++, name: '', raw: null, dur: 0, vol: 1, offset: 0, max: 0, src: null, open: false, mute: false, solo: false });
 const refOffset = () => hasContent(slots[0]) ? slots[0].offset : 0;
+const anySolo = () => slots.some((s) => hasContent(s) && s.solo);
+const audible = (s) => !s.mute && (!anySolo() || s.solo);
+const effGain = (s) => (rec && rec.id === s.id) ? 0 : (audible(s) ? s.vol : 0);
 
 function fmt(t){
   if (t == null || !isFinite(t)) return '–:––,––';
@@ -769,7 +793,7 @@ function saveSlotData(s){
 function stateObj(){
   return {
     v: 3, nextId, tempoPct, semi, A, B, loopOn, locked,
-    slots: slots.map((s) => ({ id: s.id, name: s.name, vol: s.vol, offset: s.offset, has: hasContent(s) }))
+    slots: slots.map((s) => ({ id: s.id, name: s.name, vol: s.vol, offset: s.offset, has: hasContent(s), mute: !!s.mute, solo: !!s.solo }))
   };
 }
 function writeState(){
@@ -857,7 +881,7 @@ function playingSlots(){ return slots.filter((s) => hasContent(s) && R && R.bufs
 
 function snapOut(tb){
   const sr = R.sr, i0 = Math.round(tb * sr), w = Math.round(0.004 * sr);
-  const ch = playingSlots().map((s) => ({ d: R.bufs[s.id].getChannelData(0), v: s.vol }));
+  const ch = playingSlots().map((s) => ({ d: R.bufs[s.id].getChannelData(0), v: effGain(s) || 0.001 }));
   if (!ch.length) return tb;
   const len = ch[0].d.length;
   const at = (i) => { let s = 0; for (const c of ch) s += c.d[i] * c.v; return s; };
@@ -913,7 +937,7 @@ function startAt(tau, opts){
     src.buffer = R.bufs[s.id];
     const gn = c.createGain();
     src.connect(gn); gn.connect(c.destination);
-    const v = opts.muteId === s.id ? 0 : s.vol;
+    const v = opts.muteId === s.id ? 0 : effGain(s);
     gn.gain.setValueAtTime(0, when);
     gn.gain.linearRampToValueAtTime(v, when + 0.006);
     if (curLoop){ src.loop = true; src.loopStart = curLoop.a; src.loopEnd = curLoop.b; }
@@ -1048,14 +1072,32 @@ function updateFx(){
   scheduleSave();
 }
 
+function applyGains(){
+  if (!ctx) return;
+  const n = ctx.currentTime;
+  for (const s of slots){
+    const gn = gains[s.id];
+    if (!gn) continue;
+    try { gn.gain.cancelScheduledValues(n); gn.gain.setTargetAtTime(effGain(s), n, 0.015); } catch (e) {}
+  }
+}
 function setVol(id, pct){
   const s = slotById(id);
   if (!s) return;
   s.vol = clamp(pct, 0, 150) / 100;
-  const out = document.querySelector('.track[data-id="' + id + '"] .vol-out');
-  if (out) out.textContent = Math.round(s.vol * 100) + '%';
-  const gn = gains[id];
-  if (gn && ctx){ const n = ctx.currentTime; gn.gain.cancelScheduledValues(n); gn.gain.setTargetAtTime(s.vol, n, 0.015); }
+  applyGains();
+  updateMixerValues();
+  draw();
+  scheduleSave();
+}
+function toggleMS(id, which){
+  const s = slotById(id);
+  if (!hasContent(s)) return;
+  s[which] = !s[which];
+  applyGains();
+  lastMixSig = '';
+  renderMixer();
+  draw();
   scheduleSave();
 }
 
@@ -1131,9 +1173,6 @@ function renderTracks(){
           '</div>') : '') +
         (has && s.open ? (
           '<div class="trk-more">' +
-            '<div class="slider-line"><label for="vol' + s.id + '">Głośność</label>' +
-              '<input id="vol' + s.id + '" type="range" min="0" max="150" step="1" value="' + Math.round(s.vol * 100) + '" data-act="vol">' +
-              '<output class="vol-out" for="vol' + s.id + '">' + Math.round(s.vol * 100) + '%</output></div>' +
             (i > 0 ? (
               '<div class="grid2">' +
                 '<button class="btn sm" type="button" data-act="shift" aria-pressed="' + (shiftId === s.id) + '"' + (locked ? ' disabled' : '') + '>Przesuwaj palcem</button>' +
@@ -1150,8 +1189,6 @@ function renderTracks(){
     if (!s) return;
     const o = el.querySelector('.off-out');
     if (o) o.textContent = signed(s.offset - ref, 3) + ' s';
-    const v = el.querySelector('.vol-out');
-    if (v) v.textContent = Math.round(s.vol * 100) + '%';
   });
   $('addTrack').disabled = slots.length >= MAX_TRACKS;
   $('addTrack').textContent = slots.length >= MAX_TRACKS ? 'Maks. ' + MAX_TRACKS + ' ślady' : '+ Dodaj ślad';
@@ -1168,7 +1205,7 @@ function addTrack(){
 
 function clearSlot(s, quiet){
   if (gains[s.id] && ctx){ try { gains[s.id].gain.setTargetAtTime(0, ctx.currentTime, 0.01); } catch (e) {} }
-  s.raw = null; s.name = ''; s.dur = 0; s.offset = 0; s.max = 0; s.src = null; s.open = false;
+  s.raw = null; s.name = ''; s.dur = 0; s.offset = 0; s.max = 0; s.src = null; s.open = false; s.mute = false; s.solo = false;
   if (shiftId === s.id) shiftId = null;
   if (lastRec && lastRec.id === s.id) lastRec = null;
   if (R && R.bufs[s.id]) delete R.bufs[s.id];
@@ -1228,11 +1265,86 @@ $('trackList').addEventListener('click', (e) => {
     shareBlob(wavBlob(s.raw, SR()), safeName(s.name || 'Ślad') + '.wav', 'audio/wav');
   }
 });
-$('trackList').addEventListener('input', (e) => {
-  const el = e.target;
-  if (el.dataset.act !== 'vol') return;
-  const tr = el.closest('.track');
-  if (tr) setVol(+tr.dataset.id, +el.value);
+/* ---------- mixer (volume faders, mute, solo) next to the lanes ---------- */
+const VOL_MAX = 1.5;
+let lastMixSig = '', faderDrag = null;
+function laneCssH(){
+  const h = canvas.clientHeight || parseFloat(canvas.style.height) || 170;
+  return (h - 26) / Math.max(1, slots.length);
+}
+function renderMixer(){
+  const lh = laneCssH();
+  const sig = JSON.stringify([slots.map((s) => [s.id, hasContent(s), s.mute, s.solo]), Math.round(lh)]);
+  if (sig !== lastMixSig){
+    lastMixSig = sig;
+    $('mixer').innerHTML = slots.map((s, i) => {
+      const style = 'height:' + lh.toFixed(1) + 'px';
+      if (!hasContent(s)) return '<div class="strip" style="' + style + '"></div>';
+      return '<div class="strip' + (audible(s) ? '' : ' off') + '" data-id="' + s.id + '" style="' + style + '">' +
+        '<div class="ms">' +
+          '<button class="btn mute" type="button" data-ms="mute" aria-pressed="' + !!s.mute + '" aria-label="Wycisz ślad ' + (i + 1) + '">M</button>' +
+          '<button class="btn solo" type="button" data-ms="solo" aria-pressed="' + !!s.solo + '" aria-label="Solo ślad ' + (i + 1) + '">S</button>' +
+        '</div>' +
+        '<div class="fader" role="slider" tabindex="0" aria-label="Głośność śladu ' + (i + 1) + '" aria-valuemin="0" aria-valuemax="150">' +
+          '<span class="rail"></span><span class="fill"></span><span class="unity"></span><span class="knob"></span>' +
+        '</div></div>';
+    }).join('');
+  }
+  updateMixerValues();
+}
+function updateMixerValues(){
+  document.querySelectorAll('#mixer .strip[data-id]').forEach((el) => {
+    const s = slotById(+el.dataset.id);
+    if (!s) return;
+    const f = el.querySelector('.fader');
+    const span = Math.max(1, f.clientHeight - 14);
+    const y = (s.vol / VOL_MAX) * span;
+    el.querySelector('.fill').style.height = y + 'px';
+    el.querySelector('.knob').style.bottom = (7 + y) + 'px';
+    el.querySelector('.unity').style.bottom = (7 + span / VOL_MAX) + 'px';
+    f.setAttribute('aria-valuenow', String(Math.round(s.vol * 100)));
+    f.setAttribute('aria-valuetext', Math.round(s.vol * 100) + '%');
+    el.classList.toggle('off', !audible(s));
+  });
+}
+$('mixer').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-ms]');
+  if (!b) return;
+  toggleMS(+b.closest('.strip').dataset.id, b.dataset.ms);
+});
+$('mixer').addEventListener('pointerdown', (e) => {
+  const f = e.target.closest('.fader');
+  if (!f) return;
+  const s = slotById(+f.closest('.strip').dataset.id);
+  if (!s) return;
+  e.preventDefault();
+  try { f.setPointerCapture(e.pointerId); } catch (err) {}
+  faderDrag = { id: s.id, y0: e.clientY, v0: s.vol, span: Math.max(20, f.clientHeight - 14), moved: false };
+});
+$('mixer').addEventListener('pointermove', (e) => {
+  if (!faderDrag) return;
+  const dy = faderDrag.y0 - e.clientY;
+  if (Math.abs(dy) > 2) faderDrag.moved = true;
+  let v = faderDrag.v0 + dy / faderDrag.span * VOL_MAX;
+  if (Math.abs(v - 1) < 0.04) v = 1;
+  setVol(faderDrag.id, Math.round(clamp(v, 0, VOL_MAX) * 100));
+  say('Głośność śladu ' + (slots.findIndex((x) => x.id === faderDrag.id) + 1) + ': ' + Math.round(slotById(faderDrag.id).vol * 100) + '%');
+});
+const endFader = () => { faderDrag = null; };
+$('mixer').addEventListener('pointerup', endFader);
+$('mixer').addEventListener('pointercancel', endFader);
+$('mixer').addEventListener('dblclick', (e) => {
+  const f = e.target.closest('.fader');
+  if (f) { setVol(+f.closest('.strip').dataset.id, 100); say('Głośność: 100%'); }
+});
+$('mixer').addEventListener('keydown', (e) => {
+  const f = e.target.closest('.fader');
+  if (!f) return;
+  const s = slotById(+f.closest('.strip').dataset.id);
+  if (!s) return;
+  const step = e.shiftKey ? 10 : 5;
+  if (e.key === 'ArrowUp' || e.key === 'ArrowRight'){ e.preventDefault(); e.stopPropagation(); setVol(s.id, Math.round(s.vol * 100) + step); }
+  else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft'){ e.preventDefault(); e.stopPropagation(); setVol(s.id, Math.round(s.vol * 100) - step); }
 });
 
 /* ---------- waveform ---------- */
@@ -1241,6 +1353,7 @@ function updateCanvasHeight(){
   const wide = window.innerWidth >= 700;
   canvas.style.height = ((wide ? 140 : 110) + (wide ? 66 : 54) * n) + 'px';
   resize();
+  renderMixer();
 }
 function resetView(){ view = { s: 0, e: timelineDur() }; buildPeaks(); }
 function fitZoom(){
@@ -1329,7 +1442,10 @@ function draw(){
     const amp = laneH / 2 - 3 * dpr;
     if (rec && rec.id === L.id){ g.fillStyle = cRecSoft; g.fillRect(0, y0, W, laneH); }
     if (j > 0){ g.fillStyle = cLine; g.fillRect(0, Math.round(y0), W, Math.max(1, dpr)); }
+    const ls = slotById(L.id);
+    const quiet = ls && hasContent(ls) && !audible(ls);
     if (L.vals){
+      g.globalAlpha = quiet ? 0.28 : 1;
       const ex0 = clamp(tToX(L.start, W), 0, W), ex1 = clamp(tToX(L.start + L.dur, W), 0, W);
       g.fillStyle = cLine;
       if (ex1 > ex0) g.fillRect(ex0, Math.round(mid), ex1 - ex0, Math.max(1, dpr));
@@ -1342,14 +1458,18 @@ function draw(){
         g.fillStyle = inLoop ? cHot : cWave;
         g.fillRect(x, mid - h, bw, h * 2);
       }
+      g.globalAlpha = 1;
     }
-    if (nL > 1){
+    const volTxt = ls && hasContent(ls) ? (ls.mute ? 'M' : (anySolo() && !ls.solo) ? '' : ls.solo ? 'S' : '') + (Math.round(ls.vol * 100) !== 100 ? ' ' + Math.round(ls.vol * 100) + '%' : '') : '';
+    if (nL > 1 || volTxt){
       g.font = '800 ' + Math.round(11 * dpr) + 'px system-ui, -apple-system, sans-serif';
-      g.textBaseline = 'middle'; g.textAlign = 'center';
+      g.textBaseline = 'middle'; g.textAlign = 'left';
+      const label = String(L.idx + 1) + (volTxt ? '  ' + volTxt.trim() : '');
+      const tw = g.measureText(label).width;
       g.fillStyle = cPanel;
-      roundRect(2 * dpr, y0 + 4 * dpr, 16 * dpr, 16 * dpr, 4 * dpr); g.fill();
+      roundRect(2 * dpr, y0 + 4 * dpr, tw + 10 * dpr, 16 * dpr, 4 * dpr); g.fill();
       g.fillStyle = cMuted;
-      g.fillText(String(L.idx + 1), 10 * dpr, y0 + 12.5 * dpr);
+      g.fillText(label, 7 * dpr, y0 + 12.5 * dpr);
     }
   });
 
@@ -1414,6 +1534,7 @@ function updateNow(){ $('now').textContent = fmt(pos()); }
 
 function ui(){
   renderTracks();
+  renderMixer();
   if (shiftId != null && !hasContent(slotById(shiftId))) shiftId = null;
   const sIdx = slots.findIndex((s) => s.id === shiftId);
   $('shiftNote').hidden = shiftId == null;
@@ -1487,7 +1608,7 @@ async function loadSession(sid){
   nextId = st.nextId || 1;
   const out = [];
   for (const m of st.slots.slice(0, MAX_TRACKS)){
-    const s = { id: m.id, name: m.name || '', raw: null, dur: 0, vol: m.vol != null ? m.vol : 1, offset: m.offset || 0, max: 0, src: null, open: false };
+    const s = { id: m.id, name: m.name || '', raw: null, dur: 0, vol: m.vol != null ? m.vol : 1, offset: m.offset || 0, max: 0, src: null, open: false, mute: !!m.mute, solo: !!m.solo };
     nextId = Math.max(nextId, m.id + 1);
     if (m.has){
       try {
@@ -1635,7 +1756,7 @@ function exportSession(){
     if (!hasContent(s)){ meta.tracks.push({ empty: true, vol: s.vol }); continue; }
     const src = slotSrc(s);
     const bytes = new Uint8Array(src.data);
-    meta.tracks.push({ name: s.name, vol: s.vol, offset: s.offset, kind: src.kind, sr: src.sr || null, bytes: bytes.length });
+    meta.tracks.push({ name: s.name, vol: s.vol, offset: s.offset, mute: !!s.mute, solo: !!s.solo, kind: src.kind, sr: src.sr || null, bytes: bytes.length });
     parts.push(bytes);
   }
   const json = new TextEncoder().encode(JSON.stringify(meta));
@@ -1665,7 +1786,7 @@ async function importSessionFile(file){
       const data = buf.slice(p, p + t.bytes); p += t.bytes;
       const src = t.kind === 'file' ? { kind: 'file', name: t.name, data } : { kind: 'pcm', sr: t.sr, name: t.name, data };
       await DB.put(dKey(sid, id), src);
-      st.slots.push({ id, name: t.name || '', vol: t.vol != null ? t.vol : 1, offset: t.offset || 0, has: true });
+      st.slots.push({ id, name: t.name || '', vol: t.vol != null ? t.vol : 1, offset: t.offset || 0, has: true, mute: !!t.mute, solo: !!t.solo });
       n++;
     }
     if (!st.slots.length) st.slots.push({ id: st.nextId++, name: '', vol: 1, offset: 0, has: false });
@@ -1912,7 +2033,8 @@ function doBounce(onlyLoop){
   if (onlyLoop && loopActive()){ a = Math.max(0, Math.round(A / R.T * sr)); b = Math.min(len, Math.round(B / R.T * sr)); }
   const out = new Float32Array(Math.max(1, b - a));
   for (const s of playingSlots()){
-    const d = R.bufs[s.id].getChannelData(0), v = s.vol;
+    const d = R.bufs[s.id].getChannelData(0), v = effGain(s);
+    if (!v) continue;
     for (let i = 0; i < out.length; i++) out[i] += d[a + i] * v;
   }
   let m = 0; for (let i = 0; i < out.length; i++){ const q = Math.abs(out[i]); if (q > m) m = q; }
