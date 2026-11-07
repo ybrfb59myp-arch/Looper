@@ -7,6 +7,9 @@ Prosta aplikacja do ćwiczenia z nagraniami z Dyktafonu na iPhonie i tablecie.
 - tempo od −50% do +50% bez zmiany wysokości dźwięku, transpozycja od −7 do +7 półtonów
 - głośność i przesunięcie każdego śladu, zapis śladu do WAV
 - **Eksportuj MP3**: zgranie całości albo pętli do wysłania np. Messengerem
+- wczytywanie filmów z galerii (np. nagrania ekranu) — zostaje sam dźwięk
+- sesje: lista, nazwy, kopie, przesyłanie sesji jako plik `.looper`
+- kłódka blokująca pętlę, przesuwanie śladów 2–4 względem śladu 1 z zapamiętywaną poprawką nagrań
 - działa offline po dodaniu do ekranu początkowego, pamięta ostatnią sesję
 
 Otwórz: https://ybrfb59myp-arch.github.io/Looper/  

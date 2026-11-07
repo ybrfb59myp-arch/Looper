@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Looper</title>
-<meta name="description" content="Zapętlanie nagrań z Dyktafonu, tempo i tonacja, kilka śladów i dogrywanie.">
+<meta name="description" content="Zapętlanie nagrań z Dyktafonu, tempo i tonacja, kilka śladów, dogrywanie i sesje.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -51,11 +51,7 @@
 html,body{margin:0;height:100%}
 body{background:var(--bg);color:var(--ink);font-family:var(--font-ui);-webkit-text-size-adjust:100%;line-height:1.4}
 .app{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:14px;
-  padding:calc(12px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(32px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left))}
-.net{align-self:flex-end;font-size:.75rem;font-weight:700;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:3px 9px;margin-bottom:-6px}
-
-.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:10px}
-.card.drop{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  padding:calc(10px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(32px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left))}
 
 .btn{appearance:none;-webkit-appearance:none;font:inherit;font-weight:700;font-size:.95rem;
   border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:12px;
@@ -68,8 +64,34 @@ body{background:var(--bg);color:var(--ink);font-family:var(--font-ui);-webkit-te
 .btn[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent)}
 .btn.accent{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
 .btn.sm{min-height:40px;padding:6px 8px;font-size:.85rem;border-radius:10px}
-.btn.xs{min-height:36px;min-width:40px;padding:4px 8px;font-size:.95rem;border-radius:10px}
+.btn.xs{min-height:34px;min-width:38px;padding:4px 8px;font-size:.9rem;border-radius:9px}
 .btn.warn{border-color:var(--rec);color:var(--rec)}
+
+/* session bar */
+.sessbar{display:flex;align-items:center;gap:8px}
+.sess-btn{flex:1;min-width:0;display:flex;align-items:center;gap:8px;background:none;border:0;padding:6px 0;color:var(--ink);font:inherit;font-weight:800;font-size:1rem;cursor:pointer;text-align:left;-webkit-tap-highlight-color:transparent}
+.sess-btn span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sess-btn svg{flex:none;color:var(--muted)}
+.sess-btn .chev{transition:transform .15s}
+.sess-btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+.sess-btn:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:6px}
+.net{flex:none;font-size:.75rem;font-weight:700;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:3px 9px}
+.sess-list{display:flex;flex-direction:column}
+.sess-row{display:flex;align-items:center;gap:8px;padding:8px 0}
+.sess-row + .sess-row{border-top:1px solid var(--line)}
+.sess-info{flex:1;min-width:0}
+.sess-info b{display:block;font-size:.92rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sess-info small{color:var(--muted);font-size:.78rem}
+.sess-cur{font-size:.78rem;font-weight:800;color:var(--accent-ink);padding:0 6px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.rename{display:flex;gap:8px}
+.rename input{flex:1;min-width:0;font:inherit;font-size:1rem;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
+.rename input:focus-visible{outline:3px solid var(--accent);outline-offset:1px}
+.note{margin:0;font-size:.8rem;color:var(--muted)}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.card.drop{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
 
 /* tracks */
 .trk-list{display:flex;flex-direction:column}
@@ -91,17 +113,16 @@ body{background:var(--bg);color:var(--ink);font-family:var(--font-ui);-webkit-te
 .btn.recb.rec-active{background:var(--rec);color:#fff}
 .btn.recb.rec-active .dot{background:#fff;border-radius:2px;animation:blink 1s steps(2) infinite}
 @keyframes blink{50%{opacity:.35}}
+.shift-line{display:flex;align-items:center;gap:6px}
+.shift-line .lbl{flex:1;font-size:.8rem;font-weight:700;color:var(--muted)}
+.shift-line output{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:.85rem;font-weight:700;min-width:5.6em;text-align:center}
+.shift-line .btn{font-family:var(--font-num);font-weight:700;letter-spacing:-.06em}
 .trk-more{display:flex;flex-direction:column;gap:8px;padding:10px;border-radius:12px;background:var(--sunk);border:1px solid var(--line)}
 .slider-line{display:grid;grid-template-columns:auto 1fr 3.4em;align-items:center;gap:10px;font-size:.82rem;color:var(--muted);font-weight:700}
 .slider-line output{font-family:var(--font-num);font-variant-numeric:tabular-nums;color:var(--ink);text-align:right;font-weight:500}
-.off-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:.82rem;color:var(--muted);font-weight:700}
-.off-head output{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:1rem;color:var(--ink);font-weight:700}
-.off-actions{display:grid;grid-template-columns:1fr auto;gap:8px}
 .trk-foot{display:grid;grid-template-columns:1fr 1fr;gap:8px;border-top:1px solid var(--line);padding-top:10px}
 .sheet{display:flex;flex-direction:column;gap:8px;padding:10px;border-radius:12px;background:var(--sunk);border:1px solid var(--line)}
 .sheet-title{margin:0;font-size:.85rem;font-weight:800}
-.sheet-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.sheet-note{margin:0;font-size:.82rem;color:var(--muted)}
 
 /* range inputs */
 input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;height:34px;margin:0;background:transparent;cursor:pointer}
@@ -114,20 +135,20 @@ input[type="range"]:focus-visible{outline:3px solid var(--accent);outline-offset
 /* waveform */
 canvas{display:block;width:100%;height:170px;touch-action:none;cursor:crosshair}
 canvas.shifting{cursor:ew-resize}
-.readout{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px}
+canvas.locked{cursor:default}
+.readout{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
 .now{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:1.6rem;font-weight:700;letter-spacing:-.02em}
 .dur{font-size:.85rem;color:var(--muted);margin-left:6px;font-weight:500;letter-spacing:0}
-.marks{display:flex;gap:6px;flex-wrap:wrap}
+.marks{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .chip{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:.8rem;padding:4px 9px;border-radius:999px;background:var(--accent-soft);white-space:nowrap}
 .chip b{color:var(--accent-ink)}
 .chip.len{background:transparent;border:1px solid var(--line);color:var(--muted);font-family:var(--font-ui);font-weight:600}
+.lockbtn{min-height:30px;min-width:34px;padding:2px 6px;border-radius:999px}
+.lockbtn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
 .shift-note{margin:0;font-size:.82rem;font-weight:700;color:var(--accent-ink)}
 
-.transport{display:grid;grid-template-columns:1fr 1.15fr 1fr;gap:10px}
-.big{min-height:66px;font-size:1.05rem;border-radius:16px}
-.big small{display:block;font-size:.72rem;font-weight:600;color:var(--muted)}
-.big .stack{display:flex;flex-direction:column;align-items:center;line-height:1.15}
-.play{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.transport{display:grid;grid-template-columns:1fr}
+.play{min-height:64px;border-radius:16px;background:var(--ink);color:var(--bg);border-color:var(--ink)}
 
 /* tempo / key */
 .fx-item{display:flex;flex-direction:column;gap:2px}
@@ -136,6 +157,7 @@ canvas.shifting{cursor:ew-resize}
 .fx-head label{font-weight:800;font-size:.95rem}
 .fx-head output{flex:1;min-width:0;font-variant-numeric:tabular-nums;font-weight:800;font-size:.95rem;color:var(--accent-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .fx-btns{display:flex;gap:6px}
+.fx-btns .btn{min-height:36px;min-width:40px}
 .scale{display:flex;justify-content:space-between;font-family:var(--font-num);font-size:.72rem;color:var(--muted);padding:0 4px}
 .busy{display:flex;align-items:center;gap:10px;font-size:.82rem;color:var(--muted);font-weight:700}
 .busy .bar{flex:1;height:6px;border-radius:3px;background:var(--line);overflow:hidden}
@@ -149,7 +171,6 @@ canvas.shifting{cursor:ew-resize}
 .seg .btn{border:0;border-radius:0;min-width:48px}
 .seg .btn[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
 .nudges{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;flex:1 1 210px}
-.trk-more .nudges{flex:none}
 .nudges .btn{font-family:var(--font-num);font-size:.8rem;padding:8px 2px;font-weight:700}
 
 .msg{min-height:1.3em;margin:-8px 0;font-size:.9rem;color:var(--muted)}
@@ -167,7 +188,6 @@ details.fold summary:focus-visible{outline:3px solid var(--accent);outline-offse
 .set-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .set-row > span{flex:1 1 160px;font-weight:700;color:var(--ink);font-size:.88rem}
 .set-row small{display:block;font-weight:500;color:var(--muted);font-size:.78rem}
-.set-row output{font-family:var(--font-num);font-variant-numeric:tabular-nums;color:var(--ink);min-width:4.5em;text-align:center}
 .help ol{margin:0;padding-left:1.2em;display:grid;gap:6px;max-width:65ch}
 .help strong{color:var(--ink);font-weight:700}
 
@@ -184,13 +204,40 @@ body.recording #tracks .trk-name{pointer-events:none;opacity:.45}
   .row .btn{font-size:.78rem}
   .now{font-size:1.4rem}
   .btn.sm{font-size:.8rem}
+  .shift-line .lbl{display:none}
 }
 @media (prefers-reduced-motion: reduce){ .btn:active{transform:none} .btn.recb.rec-active .dot{animation:none} }
 </style>
 </head>
 <body>
 <main class="app">
-  <span id="net" class="net" hidden>Offline</span>
+  <div class="sessbar lockable">
+    <button id="sessBtn" class="sess-btn" type="button" aria-expanded="false" aria-controls="sessPanel">
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+      <span id="sessName">Sesja</span>
+      <svg class="chev" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <span id="net" class="net" hidden>Offline</span>
+  </div>
+
+  <section id="sessPanel" class="card lockable" aria-label="Sesje" hidden>
+    <div class="grid3">
+      <button id="sessNew" class="btn sm" type="button">Nowa sesja</button>
+      <button id="sessRename" class="btn sm" type="button">Zmień nazwę</button>
+      <button id="sessCopy" class="btn sm" type="button">Zrób kopię</button>
+    </div>
+    <div id="renameRow" class="rename" hidden>
+      <input id="renameIn" type="text" maxlength="60" autocomplete="off" aria-label="Nazwa sesji">
+      <button id="renameOk" class="btn sm accent" type="button">Zapisz</button>
+    </div>
+    <div id="sessList" class="sess-list"></div>
+    <div class="grid2">
+      <button id="sessExport" class="btn sm" type="button">Wyślij sesję jako plik</button>
+      <button id="sessImport" class="btn sm" type="button">Otwórz plik sesji</button>
+    </div>
+    <p class="note">Sesje zapisują się same, na tym urządzeniu. Plik sesji możesz przesłać AirDropem na drugie urządzenie i tam go otworzyć.</p>
+    <input id="sessFileIn" type="file" hidden>
+  </section>
 
   <section id="tracks" class="card" aria-label="Ślady">
     <div id="trackList" class="trk-list"></div>
@@ -200,25 +247,25 @@ body.recording #tracks .trk-name{pointer-events:none;opacity:.45}
     </div>
     <div id="bounceSheet" class="sheet" hidden>
       <p class="sheet-title" id="bounceTitle">Co zgrać do MP3?</p>
-      <div class="sheet-row" id="bounceChoice">
+      <div class="grid2" id="bounceChoice">
         <button id="bounceAll" class="btn sm" type="button">Cały utwór</button>
         <button id="bounceLoop" class="btn sm" type="button">Tylko pętlę A–B</button>
       </div>
       <div id="bounceProg" class="busy" hidden><div class="bar"><span id="bounceBar"></span></div><span id="bounceTxt">0%</span></div>
-      <div class="sheet-row" id="bounceDone" hidden>
+      <div class="grid2" id="bounceDone" hidden>
         <button id="bounceShare" class="btn sm accent" type="button">Udostępnij plik</button>
         <button id="bounceClose" class="btn sm" type="button">Zamknij</button>
       </div>
-      <p class="sheet-note" id="bounceNote">Zgrywa wszystkie ślady tak, jak je słyszysz: z głośnościami, tempem i tonacją.</p>
+      <p class="note" id="bounceNote">Zgrywa wszystkie ślady tak, jak je słyszysz: z głośnościami, tempem i tonacją.</p>
       <button id="bounceCancel" class="btn sm" type="button">Anuluj</button>
     </div>
-    <input id="fileIn" type="file" accept="audio/*,.m4a,.mp3,.wav,.aac,.aif,.aiff,.caf,.qta" hidden>
+    <input id="fileIn" type="file" accept="audio/*,video/*,.m4a,.mp3,.wav,.aac,.aif,.aiff,.caf,.qta,.mov,.mp4,.m4v" hidden>
   </section>
 
   <p id="msg" class="msg" role="status" aria-live="polite"></p>
 
   <section id="card" class="card lockable" aria-label="Przebieg">
-    <canvas id="wave" aria-label="Przebieg nagrań. Stuknij, aby przewinąć. Przeciągnij palcem, aby zaznaczyć pętlę. Przeciągnij znacznik A lub B, aby go przesunąć."></canvas>
+    <canvas id="wave" aria-label="Przebieg nagrań. Przeciągnij palcem, aby zaznaczyć pętlę. Stuknij, aby przewinąć. Przeciągnij znacznik A lub B, aby go przesunąć."></canvas>
     <p id="shiftNote" class="shift-note" hidden></p>
     <div class="readout">
       <div class="now"><span id="now">0:00,00</span><span id="dur" class="dur">/ 0:00,00</span></div>
@@ -226,14 +273,34 @@ body.recording #tracks .trk-name{pointer-events:none;opacity:.45}
         <span class="chip"><b>A</b> <span id="tA">–:––,––</span></span>
         <span class="chip"><b>B</b> <span id="tB">–:––,––</span></span>
         <span class="chip len" id="tLen">brak pętli</span>
+        <button id="lock" class="btn lockbtn" type="button" aria-pressed="false" aria-label="Zablokuj pętlę"></button>
       </div>
     </div>
   </section>
 
   <section class="transport lockable" aria-label="Odtwarzanie">
-    <button id="setA" class="btn big" type="button"><span class="stack">Ustaw A<small>start pętli</small></span></button>
-    <button id="play" class="btn big play" type="button" aria-label="Odtwarzaj"></button>
-    <button id="setB" class="btn big" type="button"><span class="stack">Ustaw B<small>koniec pętli</small></span></button>
+    <button id="play" class="btn play" type="button" aria-label="Odtwarzaj"></button>
+  </section>
+
+  <section class="row lockable" aria-label="Pętla">
+    <button id="toA" class="btn" type="button">Od A</button>
+    <button id="loop" class="btn" type="button" aria-pressed="true">Pętla: wł.</button>
+    <button id="zoom" class="btn" type="button" aria-pressed="false">Powiększ</button>
+    <button id="clearLoop" class="btn" type="button">Usuń pętlę</button>
+  </section>
+
+  <section class="tune lockable" aria-label="Dostrajanie punktów">
+    <span class="tune-label" id="tuneLabel">Dostrój</span>
+    <div class="seg" role="group" aria-labelledby="tuneLabel">
+      <button id="tuneA" class="btn" type="button" aria-pressed="true">A</button>
+      <button id="tuneB" class="btn" type="button" aria-pressed="false">B</button>
+    </div>
+    <div class="nudges">
+      <button class="btn" type="button" data-d="-0.1">−0,1 s</button>
+      <button class="btn" type="button" data-d="-0.01">−0,01</button>
+      <button class="btn" type="button" data-d="0.01">+0,01</button>
+      <button class="btn" type="button" data-d="0.1">+0,1 s</button>
+    </div>
   </section>
 
   <section class="card lockable" aria-label="Tempo i transpozycja">
@@ -268,39 +335,17 @@ body.recording #tracks .trk-name{pointer-events:none;opacity:.45}
     </div>
   </section>
 
-  <section class="row lockable" aria-label="Pętla">
-    <button id="toA" class="btn" type="button">Od A</button>
-    <button id="loop" class="btn" type="button" aria-pressed="true">Pętla: wł.</button>
-    <button id="zoom" class="btn" type="button" aria-pressed="false">Powiększ</button>
-    <button id="clearLoop" class="btn" type="button">Usuń pętlę</button>
-  </section>
-
-  <section class="tune lockable" aria-label="Dostrajanie punktów">
-    <span class="tune-label" id="tuneLabel">Dostrój</span>
-    <div class="seg" role="group" aria-labelledby="tuneLabel">
-      <button id="tuneA" class="btn" type="button" aria-pressed="true">A</button>
-      <button id="tuneB" class="btn" type="button" aria-pressed="false">B</button>
-    </div>
-    <div class="nudges">
-      <button class="btn" type="button" data-d="-0.1">−0,1 s</button>
-      <button class="btn" type="button" data-d="-0.01">−0,01</button>
-      <button class="btn" type="button" data-d="0.01">+0,01</button>
-      <button class="btn" type="button" data-d="0.1">+0,1 s</button>
-    </div>
-  </section>
-
   <details class="fold lockable" id="settings">
     <summary>Ustawienia</summary>
     <div class="fold-body">
       <div class="set-row">
-        <span>Korekta opóźnienia nagrania<small>Gdy nagranie spóźnia się względem podkładu, zwiększ.</small></span>
-        <button id="latMinus" class="btn xs" type="button" aria-label="Zmniejsz korektę o 5 ms">−</button>
-        <output id="latV">0 ms</output>
-        <button id="latPlus" class="btn xs" type="button" aria-label="Zwiększ korektę o 5 ms">+</button>
+        <span>Zapamiętana poprawka nagrań<small>Uczy się, gdy przesuwasz strzałkami świeże nagranie.</small></span>
+        <output id="learnV" style="font-family:var(--font-num);color:var(--ink)">0 ms</output>
+        <button id="learnReset" class="btn sm" type="button">Wyzeruj</button>
       </div>
       <div class="set-row">
         <span>Rozbieg przed nagraniem<small>Ile podkładu zagra przed punktem startu.</small></span>
-        <div class="seg" role="group" aria-label="Rozbieg przed nagraniem" id="prerollSeg">
+        <div class="seg" role="group" aria-label="Rozbieg przed nagraniem">
           <button class="btn" type="button" data-pre="0">0 s</button>
           <button class="btn" type="button" data-pre="1">1 s</button>
           <button class="btn" type="button" data-pre="2">2 s</button>
@@ -308,8 +353,8 @@ body.recording #tracks .trk-name{pointer-events:none;opacity:.45}
         </div>
       </div>
       <div class="set-row">
-        <span>Zacznij od nowa<small>Usuwa wszystkie ślady z tego urządzenia.</small></span>
-        <button id="wipe" class="btn sm warn" type="button">Usuń wszystko</button>
+        <span>Wyczyść sesję<small>Usuwa wszystkie ślady z bieżącej sesji.</small></span>
+        <button id="wipe" class="btn sm warn" type="button">Wyczyść</button>
       </div>
     </div>
   </details>
@@ -318,13 +363,14 @@ body.recording #tracks .trk-name{pointer-events:none;opacity:.45}
     <summary>Jak to działa</summary>
     <div class="fold-body">
       <ol>
-        <li><strong>Wczytaj</strong> bierze nagranie z Plików. W Dyktafonie stuknij nagranie, potem <strong>•••</strong> → Udostępnij → <strong>Zachowaj w Plikach</strong>. Pliki zostają na urządzeniu, a ostatnia sesja zapamiętuje się sama.</li>
-        <li><strong>Nagraj</strong> nagrywa do wybranego śladu, a pozostałe ślady grają jako podkład. Załóż słuchawki, najlepiej przewodowe. Przy ustawionej pętli nagrywanie rusza przed A i kończy się samo po B. <strong>Wyczyść</strong> opróżnia ślad, żeby nagrać jeszcze raz, a <strong>Usuń</strong> kasuje cały ślad.</li>
-        <li>Stuknij nazwę śladu, żeby zmienić jego głośność, przesunąć go względem innych albo zapisać go jako WAV, np. do przeniesienia AirDropem na drugie urządzenie.</li>
-        <li><strong>Pętla:</strong> podczas słuchania stuknij <strong>Ustaw A</strong> i <strong>Ustaw B</strong>, albo przeciągnij palcem po przebiegu. Przyciski ± dostrajają wybrany punkt, a <strong>Powiększ</strong> pokazuje samą pętlę.</li>
+        <li><strong>Wczytaj</strong> bierze nagranie z Plików albo film z galerii, np. nagranie ekranu ze Spotify. Z filmu zostaje sam dźwięk. Niektóre aplikacje (np. Apple Music) wyciszają nagrywanie ekranu. Z Dyktafonu: stuknij nagranie, potem <strong>•••</strong> → Udostępnij → <strong>Zachowaj w Plikach</strong>.</li>
+        <li><strong>Nagraj</strong> nagrywa do wybranego śladu, a pozostałe grają jako podkład. Załóż słuchawki, najlepiej przewodowe. Przy ustawionej pętli nagrywanie rusza przed A i kończy się samo po B. <strong>Wyczyść</strong> opróżnia ślad, a <strong>Usuń</strong> kasuje cały ślad.</li>
+        <li>Ślady 2–4 przesuwasz strzałkami względem śladu 1: <strong>‹ ›</strong> o 10 ms, <strong>‹‹ ››</strong> o 100 ms. Gdy poprawiasz świeże nagranie, aplikacja zapamiętuje poprawkę i stosuje ją do kolejnych nagrań.</li>
+        <li><strong>Pętla:</strong> przeciągnij palcem po przebiegu, a potem dostrój A i B przyciskami ±. Znaczniki A i B możesz też przeciągać. <strong>Kłódka</strong> blokuje pętlę i przebieg przed przypadkowym dotknięciem.</li>
         <li><strong>Tempo i transpozycja</strong> działają na wszystkie ślady. Tempo zmienia się bez zmiany wysokości dźwięku, a transpozycja bez zmiany tempa.</li>
+        <li><strong>Sesje:</strong> stuknij nazwę sesji na górze, żeby otworzyć listę, założyć nową, zrobić kopię albo wysłać sesję jako plik na drugie urządzenie. Wszystko zapisuje się samo.</li>
         <li><strong>Eksportuj MP3</strong> zgrywa wszystko tak, jak słyszysz. W menu udostępniania wybierz Messengera albo Zachowaj w Plikach.</li>
-        <li>Aplikacja działa bez internetu. Brak dźwięku? Sprawdź, czy telefon nie jest w trybie cichym. Jeśli nagrania rozjeżdżają się z podkładem, ustaw <strong>Korektę opóźnienia</strong> w Ustawieniach.</li>
+        <li>Aplikacja działa bez internetu. Brak dźwięku? Sprawdź, czy telefon nie jest w trybie cichym.</li>
       </ol>
     </div>
   </details>
@@ -450,14 +496,127 @@ function* wsolaGen(Ys, Os, Ly, S, sr, outs){
   yield 1;
 }
 
+/* ---------- video (MP4 / MOV) → AAC audio as ADTS, so decodeAudioData can read it ---------- */
+function mp4AacToAdts(ab){
+  const u8 = new Uint8Array(ab), dv = new DataView(ab);
+  const fourcc = (p) => String.fromCharCode(u8[p], u8[p + 1], u8[p + 2], u8[p + 3]);
+  function boxes(start, end){
+    const out = [];
+    let p = start;
+    while (p + 8 <= end){
+      let size = dv.getUint32(p), hdr = 8;
+      const type = fourcc(p + 4);
+      if (size === 1){ size = Number(dv.getBigUint64(p + 8)); hdr = 16; }
+      else if (size === 0) size = end - p;
+      if (size < hdr || p + size > end) break;
+      out.push({ type, start: p, body: p + hdr, end: p + size });
+      p += size;
+    }
+    return out;
+  }
+  const find = (list, type) => list.find((b) => b.type === type);
+  const kids = (b) => boxes(b.body, b.end);
+
+  function parseEsds(p){
+    const readLen = () => { let len = 0; for (let i = 0; i < 4; i++){ const b = u8[p++]; len = (len << 7) | (b & 0x7f); if (!(b & 0x80)) break; } return len; };
+    if (u8[p++] !== 0x03) throw new Error('esds');
+    readLen(); p += 2;
+    const flags = u8[p++];
+    if (flags & 0x80) p += 2;
+    if (flags & 0x40) p += 1 + u8[p];
+    if (flags & 0x20) p += 2;
+    if (u8[p++] !== 0x04) throw new Error('esds/dcd');
+    readLen(); p += 13;
+    if (u8[p++] !== 0x05) throw new Error('esds/dsi');
+    readLen();
+    const b0 = u8[p], b1 = u8[p + 1];
+    let aot = b0 >> 3;
+    const sfi = ((b0 & 7) << 1) | (b1 >> 7);
+    const ch = (b1 >> 3) & 15;
+    if (aot === 31 || sfi === 15) throw new Error('unsupported AAC config');
+    if (aot === 5 || aot === 29) aot = 2;
+    return { aot, sfi, ch };
+  }
+
+  const moov = find(boxes(0, u8.length), 'moov');
+  if (!moov) throw new Error('no moov');
+  for (const trak of kids(moov).filter((b) => b.type === 'trak')){
+    const mdia = find(kids(trak), 'mdia'); if (!mdia) continue;
+    const mk = kids(mdia);
+    const hdlr = find(mk, 'hdlr'); if (!hdlr) continue;
+    if (fourcc(hdlr.body + 8) !== 'soun') continue;
+    const minf = find(mk, 'minf'); if (!minf) continue;
+    const stbl = find(kids(minf), 'stbl'); if (!stbl) continue;
+    const st = kids(stbl);
+    const stsd = find(st, 'stsd');
+    const entry = stsd && boxes(stsd.body + 8, stsd.end)[0];
+    if (!entry || entry.type !== 'mp4a') throw new Error('audio is not AAC (' + (entry ? entry.type : '?') + ')');
+    const ver = dv.getUint16(entry.body + 8);
+    let childStart = entry.body + 28 + (ver === 1 ? 16 : ver === 2 ? 36 : 0);
+    let esds = null;
+    (function search(s, e){
+      for (const b of boxes(s, e)){
+        if (b.type === 'esds'){ esds = b; return; }
+        if (b.type === 'wave') search(b.body, b.end);
+        if (esds) return;
+      }
+    })(childStart, entry.end);
+    if (!esds) throw new Error('no esds');
+    const cfg = parseEsds(esds.body + 4);
+
+    const stsz = find(st, 'stsz');
+    const fixed = dv.getUint32(stsz.body + 4), count = dv.getUint32(stsz.body + 8);
+    const sizes = new Uint32Array(count);
+    for (let i = 0; i < count; i++) sizes[i] = fixed || dv.getUint32(stsz.body + 12 + i * 4);
+
+    const stco = find(st, 'stco'), co64 = find(st, 'co64');
+    let offsets;
+    if (stco){ const n = dv.getUint32(stco.body + 4); offsets = new Float64Array(n); for (let i = 0; i < n; i++) offsets[i] = dv.getUint32(stco.body + 8 + i * 4); }
+    else if (co64){ const n = dv.getUint32(co64.body + 4); offsets = new Float64Array(n); for (let i = 0; i < n; i++) offsets[i] = Number(dv.getBigUint64(co64.body + 8 + i * 8)); }
+    else throw new Error('no chunk offsets');
+
+    const stsc = find(st, 'stsc');
+    const ne = dv.getUint32(stsc.body + 4), ents = [];
+    for (let i = 0; i < ne; i++) ents.push([dv.getUint32(stsc.body + 8 + i * 12), dv.getUint32(stsc.body + 12 + i * 12)]);
+
+    let total = 0;
+    for (let i = 0; i < count; i++) total += sizes[i] + 7;
+    const out = new Uint8Array(total);
+    let w = 0, si = 0, e = 0;
+    const profile = cfg.aot - 1;
+    for (let c = 0; c < offsets.length && si < count; c++){
+      while (e + 1 < ents.length && ents[e + 1][0] <= c + 1) e++;
+      const spc = ents[e][1];
+      let off = offsets[c];
+      for (let k = 0; k < spc && si < count; k++, si++){
+        const sz = sizes[si], len = sz + 7;
+        if (off + sz > u8.length) { si = count; break; }
+        out[w] = 0xFF; out[w + 1] = 0xF1;
+        out[w + 2] = ((profile & 3) << 6) | ((cfg.sfi & 15) << 2) | ((cfg.ch >> 2) & 1);
+        out[w + 3] = ((cfg.ch & 3) << 6) | ((len >> 11) & 3);
+        out[w + 4] = (len >> 3) & 0xFF;
+        out[w + 5] = ((len & 7) << 5) | 0x1F;
+        out[w + 6] = 0xFC;
+        out.set(u8.subarray(off, off + sz), w + 7);
+        w += len; off += sz;
+      }
+    }
+    return out.slice(0, w).buffer;
+  }
+  throw new Error('no audio track');
+}
+
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('wave');
 const g = canvas.getContext('2d');
 const MIN_LOOP = 0.05;
 const MAX_TRACKS = 4;
-const ICON_PLAY = '<svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path d="M7 4.5v15l13-7.5z" fill="currentColor"/></svg>';
-const ICON_PAUSE = '<svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path d="M6 4h4.5v16H6zM13.5 4H18v16h-4.5z" fill="currentColor"/></svg>';
+const LEARN_LIMIT = 0.3;
+const ICON_PLAY = '<svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><path d="M7 4.5v15l13-7.5z" fill="currentColor"/></svg>';
+const ICON_PAUSE = '<svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><path d="M6 4h4.5v16H6zM13.5 4H18v16h-4.5z" fill="currentColor"/></svg>';
+const ICON_LOCK = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2" fill="currentColor"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2.2"/></svg>';
+const ICON_UNLOCK = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 11V8a4 4 0 0 1 7.6-1.8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
 const CHEVRON = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
 let ctx = null;
@@ -469,19 +628,26 @@ let renderDirty = false;
 let playR = null;
 let srcs = [], gains = {}, token = 0;
 let playing = false, t0 = 0, off0 = 0, curLoop = null, paused = 0;
-let A = null, B = null, loopOn = true, tune = 'A', zoomed = false, shiftId = null;
+let A = null, B = null, loopOn = true, tune = 'A', zoomed = false, shiftId = null, locked = false;
 let view = { s: 0, e: 1 };
-let lanes = [], drag = null, raf = 0, msgTimer = 0;
+let lanes = [], drag = null, raf = 0, msgTimer = 0, lockMsgAt = 0;
 let renderGen = 0, renderTimer = 0;
 let rec = null, recStarting = false, workletLoaded = false;
 let armed = null;                     // { act, id, t } for two-tap confirmations
 let pendingLoadId = null;
-let latencyMs = 0, preroll = 2;
+let learnMs = 0, preroll = 2;
+let lastRec = null;                   // { id, T, orig, base } — the fresh recording that teaches the correction
 let restoring = true, saveTimer = 0;
+let sessions = { current: null, nextSid: 1, list: [] };
+let curSid = null;
 let bounceBlob = null, bounceName = '', bounceWorker = null;
 let wakeLock = null;
 
-try { latencyMs = parseInt(localStorage.getItem('petla-ab.latencyMs') || '0', 10) || 0; } catch (e) {}
+try {
+  const l = localStorage.getItem('looper.learnMs');
+  if (l != null) learnMs = parseFloat(l) || 0;
+  else { const old = parseInt(localStorage.getItem('petla-ab.latencyMs') || '0', 10) || 0; learnMs = -old; }
+} catch (e) {}
 try { const p = parseFloat(localStorage.getItem('looper.preroll')); if ([0, 1, 2, 4].includes(p)) preroll = p; } catch (e) {}
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
@@ -489,6 +655,7 @@ const hasContent = (s) => !!(s && s.raw);
 const content = () => slots.filter(hasContent);
 const slotById = (id) => slots.find((s) => s.id === id) || null;
 const newSlot = () => ({ id: nextId++, name: '', raw: null, dur: 0, vol: 1, offset: 0, max: 0, src: null, open: false });
+const refOffset = () => hasContent(slots[0]) ? slots[0].offset : 0;
 
 function fmt(t){
   if (t == null || !isFinite(t)) return '–:––,––';
@@ -507,7 +674,9 @@ function semiLabel(n){
   return (n > 0 ? '+' : '−') + a + ' ' + word;
 }
 const hhmm = () => { const d = new Date(); return String(d.getHours()).padStart(2, '0') + '.' + String(d.getMinutes()).padStart(2, '0'); };
+const defaultSessName = () => { const d = new Date(); return 'Sesja ' + d.getDate() + '.' + (d.getMonth() + 1) + ' ' + hhmm(); };
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const tracksWord = (n) => n === 1 ? '1 ślad' : (n >= 2 && n <= 4) ? n + ' ślady' : n + ' śladów';
 
 function say(text, err, sticky){
   const el = $('msg');
@@ -517,7 +686,7 @@ function say(text, err, sticky){
   if (text && !sticky) msgTimer = setTimeout(() => { el.textContent = ''; el.classList.remove('err'); }, err ? 9000 : 6000);
 }
 function isArmed(act, id){ return armed && armed.act === act && armed.id === id && Date.now() - armed.t < 4000; }
-function arm(act, id){ armed = { act, id, t: Date.now() }; ui(); setTimeout(() => { if (armed && Date.now() - armed.t >= 4000){ armed = null; ui(); } }, 4100); }
+function arm(act, id){ armed = { act, id, t: Date.now() }; ui(); renderSessions(); setTimeout(() => { if (armed && Date.now() - armed.t >= 4000){ armed = null; ui(); renderSessions(); } }, 4100); }
 
 /* ---------- audio context ---------- */
 function setSession(type){ try { if (navigator.audioSession) navigator.audioSession.type = type; } catch (e) {} }
@@ -544,7 +713,7 @@ async function keepAwake(on){
   } catch (e) { wakeLock = null; }
 }
 
-/* ---------- storage (last session) ---------- */
+/* ---------- storage ---------- */
 const DB = {
   db: null,
   open(){
@@ -570,6 +739,11 @@ const DB = {
     return new Promise((res, rej) => { const tx = db.transaction('kv', 'readwrite'); tx.objectStore('kv').delete(k); tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error); });
   }
 };
+const stKey = (sid) => 's' + sid + '-state';
+const dKey = (sid, id) => 's' + sid + '-data-' + id;
+const sessMeta = (sid) => sessions.list.find((x) => x.sid === sid);
+const saveIndex = () => DB.put('sessions', sessions).catch(() => {});
+
 function toInt16(x){
   const out = new Int16Array(x.length);
   for (let i = 0; i < x.length; i++){ const s = x[i] < -1 ? -1 : x[i] > 1 ? 1 : x[i]; out[i] = s < 0 ? s * 32768 : s * 32767; }
@@ -580,26 +754,34 @@ function fromInt16(buf){
   for (let i = 0; i < a.length; i++) out[i] = a[i] / 32768;
   return out;
 }
+const slotSrc = (s) => s.src && s.src.kind === 'file' ? s.src : { kind: 'pcm', sr: SR(), name: s.name, data: toInt16(s.raw).buffer };
+
 let storageWarned = false;
 function saveSlotData(s){
-  const key = 'data-' + s.id;
-  const p = hasContent(s)
-    ? DB.put(key, s.src && s.src.kind === 'file' ? s.src : { kind: 'pcm', sr: SR(), name: s.name, data: toInt16(s.raw).buffer })
-    : DB.del(key);
+  if (curSid == null) return;
+  const key = dKey(curSid, s.id);
+  const p = hasContent(s) ? DB.put(key, slotSrc(s)) : DB.del(key);
   p.catch(() => {
-    if (!storageWarned){ storageWarned = true; say('Nie udało się zapamiętać nagrania na następny raz (brak miejsca?). Wszystko działa, tylko po zamknięciu trzeba je wczytać ponownie.', true); }
+    if (!storageWarned){ storageWarned = true; say('Nie udało się zapamiętać nagrania (brak miejsca?). Wszystko działa, tylko po zamknięciu trzeba je wczytać ponownie.', true); }
   });
   scheduleSave(true);
+}
+function stateObj(){
+  return {
+    v: 3, nextId, tempoPct, semi, A, B, loopOn, locked,
+    slots: slots.map((s) => ({ id: s.id, name: s.name, vol: s.vol, offset: s.offset, has: hasContent(s) }))
+  };
+}
+function writeState(){
+  if (curSid == null) return Promise.resolve();
+  const m = sessMeta(curSid);
+  if (m){ m.updated = Date.now(); m.tracks = content().length; }
+  return Promise.all([DB.put(stKey(curSid), stateObj()), saveIndex()]).catch(() => {});
 }
 function scheduleSave(now){
   if (restoring) return;
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
-    DB.put('state2', {
-      v: 2, nextId, tempoPct, semi, A, B, loopOn,
-      slots: slots.map((s) => ({ id: s.id, name: s.name, vol: s.vol, offset: s.offset, has: hasContent(s) }))
-    }).catch(() => {});
-  }, now ? 0 : 800);
+  saveTimer = setTimeout(writeState, now ? 0 : 800);
 }
 
 /* ---------- rendering (tempo / key / alignment) ---------- */
@@ -671,7 +853,6 @@ async function doRender(){
 
 /* ---------- playback ---------- */
 function loopActive(){ return loopOn && A != null && B != null && B - A >= MIN_LOOP; }
-
 function playingSlots(){ return slots.filter((s) => hasContent(s) && R && R.bufs[s.id]); }
 
 function snapOut(tb){
@@ -778,10 +959,13 @@ function clampMarks(){
   if (A != null && B != null && B - A < MIN_LOOP) B = null;
   paused = clamp(paused, 0, D);
 }
-function needContent(){ if (content().length) return true; say('Najpierw wczytaj albo nagraj ślad.'); return false; }
+function lockedMsg(){
+  if (Date.now() - lockMsgAt > 2500){ lockMsgAt = Date.now(); say('Pętla jest zablokowana. Odblokuj ją kłódką pod przebiegiem.'); }
+}
 
 function setA(){
-  if (!needContent()) return;
+  if (locked){ lockedMsg(); return; }
+  if (!content().length) return;
   const p = pos();
   const hadLoop = !!curLoop;
   A = clamp(p, 0, timelineDur() - MIN_LOOP);
@@ -791,20 +975,19 @@ function setA(){
   if (playing && (hadLoop || loopActive())) startAt(A);
   else if (!playing) paused = A;
   ui();
-  say('Punkt A: ' + fmt(A) + (B == null ? '. Teraz stuknij „Ustaw B” na końcu fragmentu.' : '.'), false, B == null);
 }
 
 function setB(){
-  if (!needContent()) return;
+  if (locked){ lockedMsg(); return; }
+  if (!content().length) return;
   const p = pos();
   if (A == null) A = 0;
-  if (p - A < MIN_LOOP){ say('Punkt B musi być za punktem A (A = ' + fmt(A) + ').', true); return; }
+  if (p - A < MIN_LOOP) return;
   B = Math.min(p, timelineDur());
   loopOn = true; tune = 'B';
   if (zoomed) fitZoom();
   if (playing) startAt(A); else paused = A;
   ui();
-  say('Pętla ' + fmt(A) + ' – ' + fmt(B) + '. Dostrój przyciskami ± albo przeciągnij znaczniki.');
 }
 
 function afterMarkerChange(which){
@@ -816,12 +999,13 @@ function afterMarkerChange(which){
 }
 
 function nudge(d){
+  if (locked){ lockedMsg(); return; }
   const D = timelineDur();
   if (tune === 'A'){
-    if (A == null){ say('Najpierw ustaw punkt A.', true); return; }
+    if (A == null){ say('Najpierw zaznacz pętlę, przeciągając palcem po przebiegu.', true); return; }
     A = clamp(A + d, 0, B != null ? B - MIN_LOOP : D - MIN_LOOP);
   } else {
-    if (B == null){ say('Najpierw ustaw punkt B.', true); return; }
+    if (B == null){ say('Najpierw zaznacz pętlę, przeciągając palcem po przebiegu.', true); return; }
     B = clamp(B + d, (A != null ? A : 0) + MIN_LOOP, D);
   }
   say('');
@@ -829,6 +1013,7 @@ function nudge(d){
 }
 
 function toggleLoop(){
+  if (locked){ lockedMsg(); return; }
   if (A == null || B == null) return;
   loopOn = !loopOn;
   if (playing) startAt(pos());
@@ -836,6 +1021,7 @@ function toggleLoop(){
 }
 
 function clearLoop(){
+  if (locked){ lockedMsg(); return; }
   const p = pos();
   A = null; B = null; tune = 'A';
   if (zoomed){ zoomed = false; resetView(); }
@@ -844,7 +1030,14 @@ function clearLoop(){
   say('Pętla usunięta.');
 }
 
-function toA(){ if (needContent()) startAt(A != null ? A : 0); }
+function toA(){ if (content().length) startAt(A != null ? A : 0); else say('Najpierw wczytaj albo nagraj ślad.'); }
+
+function toggleLock(){
+  locked = !locked;
+  if (locked){ shiftId = null; drag = null; }
+  ui();
+  say(locked ? 'Pętla zablokowana. Przebieg nie reaguje na dotyk.' : 'Pętla odblokowana.');
+}
 
 /* ---------- tempo, key, volume, offset ---------- */
 function setTempo(v){ tempoPct = clamp(Math.round(v), -50, 50); $('tempo').value = tempoPct; updateFx(); }
@@ -873,10 +1066,18 @@ function clampOffset(s, o){
   for (const x of others) end = Math.max(end, x.offset + x.dur);
   return Math.round(clamp(o, -s.dur + 0.05, Math.max(0, end - 0.05)) * 1000) / 1000;
 }
+function learnFrom(s){
+  if (!lastRec || lastRec.id !== s.id) return;
+  const d = s.offset - lastRec.orig;
+  learnMs = Math.round(Math.abs(d) <= LEARN_LIMIT ? lastRec.base + d / lastRec.T * 1000 : lastRec.base);
+  try { localStorage.setItem('looper.learnMs', String(learnMs)); } catch (e) {}
+  setLearnUI();
+}
 function setOffset(id, o, delay){
   const s = slotById(id);
   if (!hasContent(s)) return;
   s.offset = clampOffset(s, o);
+  learnFrom(s);
   if (R && R.bufs[id]) delete R.bufs[id];
   if (!zoomed) resetView(); else buildPeaks();
   clampMarks();
@@ -884,12 +1085,7 @@ function setOffset(id, o, delay){
   scheduleRender(delay);
 }
 
-function setLatUI(){ $('latV').textContent = (latencyMs > 0 ? '+' : latencyMs < 0 ? '−' : '') + Math.abs(latencyMs) + ' ms'; }
-function setLatency(v){
-  latencyMs = clamp(Math.round(v), -300, 500);
-  try { localStorage.setItem('petla-ab.latencyMs', String(latencyMs)); } catch (e) {}
-  setLatUI();
-}
+function setLearnUI(){ $('learnV').textContent = (learnMs > 0 ? '+' : learnMs < 0 ? '−' : '') + Math.abs(learnMs) + ' ms'; }
 function setPreroll(v){
   preroll = v;
   try { localStorage.setItem('looper.preroll', String(v)); } catch (e) {}
@@ -900,13 +1096,12 @@ function setPreroll(v){
 let lastSig = '';
 function trackSig(){
   return JSON.stringify([slots.map((s) => [s.id, hasContent(s), s.name, s.open, shiftId === s.id]),
-    rec ? rec.id : null, recStarting, armed && Date.now() - armed.t < 4000 ? [armed.act, armed.id] : null]);
+    rec ? rec.id : null, recStarting, locked, armed && Date.now() - armed.t < 4000 ? [armed.act, armed.id] : null]);
 }
 function renderTracks(){
   const sig = trackSig();
   if (sig !== lastSig){
     lastSig = sig;
-    const n = slots.length;
     $('trackList').innerHTML = slots.map((s, i) => {
       const has = hasContent(s);
       const recNow = rec && rec.id === s.id;
@@ -926,33 +1121,35 @@ function renderTracks(){
           '<button class="btn sm' + (isArmed('clear', s.id) ? ' warn' : '') + '" type="button" data-act="clear"' + (has ? '' : ' disabled') + '>' + clrLabel + '</button>' +
           (i > 0 ? '<button class="btn sm' + (isArmed('remove', s.id) ? ' warn' : '') + '" type="button" data-act="remove">' + remLabel + '</button>' : '') +
         '</div>' +
+        (i > 0 && has ? (
+          '<div class="shift-line"><span class="lbl">Przesunięcie</span>' +
+            '<button class="btn xs" type="button" data-o="-0.1" aria-label="Wcześniej o 100 ms">‹‹</button>' +
+            '<button class="btn xs" type="button" data-o="-0.01" aria-label="Wcześniej o 10 ms">‹</button>' +
+            '<output class="off-out">+0,000 s</output>' +
+            '<button class="btn xs" type="button" data-o="0.01" aria-label="Później o 10 ms">›</button>' +
+            '<button class="btn xs" type="button" data-o="0.1" aria-label="Później o 100 ms">››</button>' +
+          '</div>') : '') +
         (has && s.open ? (
           '<div class="trk-more">' +
             '<div class="slider-line"><label for="vol' + s.id + '">Głośność</label>' +
               '<input id="vol' + s.id + '" type="range" min="0" max="150" step="1" value="' + Math.round(s.vol * 100) + '" data-act="vol">' +
               '<output class="vol-out" for="vol' + s.id + '">' + Math.round(s.vol * 100) + '%</output></div>' +
-            (n > 1 ? (
-              '<div class="off-head"><span>Przesunięcie względem pozostałych</span><output class="off-out">' + signed(s.offset, 3) + ' s</output></div>' +
-              '<div class="nudges">' +
-                '<button class="btn" type="button" data-o="-0.1">−0,1 s</button>' +
-                '<button class="btn" type="button" data-o="-0.01">−0,01</button>' +
-                '<button class="btn" type="button" data-o="0.01">+0,01</button>' +
-                '<button class="btn" type="button" data-o="0.1">+0,1 s</button>' +
-              '</div>' +
-              '<div class="off-actions">' +
-                '<button class="btn sm" type="button" data-act="shift" aria-pressed="' + (shiftId === s.id) + '">Przesuwaj palcem na przebiegu</button>' +
-                '<button class="btn sm" type="button" data-act="offzero">Zeruj</button>' +
+            (i > 0 ? (
+              '<div class="grid2">' +
+                '<button class="btn sm" type="button" data-act="shift" aria-pressed="' + (shiftId === s.id) + '"' + (locked ? ' disabled' : '') + '>Przesuwaj palcem</button>' +
+                '<button class="btn sm" type="button" data-act="offzero">Wyrównaj do 1</button>' +
               '</div>') : '') +
             '<button class="btn sm" type="button" data-act="save">Zapisz ślad (WAV)</button>' +
           '</div>') : '') +
         '</div>';
     }).join('');
   }
+  const ref = refOffset();
   document.querySelectorAll('.track').forEach((el) => {
     const s = slotById(+el.dataset.id);
     if (!s) return;
     const o = el.querySelector('.off-out');
-    if (o) o.textContent = signed(s.offset, 3) + ' s';
+    if (o) o.textContent = signed(s.offset - ref, 3) + ' s';
     const v = el.querySelector('.vol-out');
     if (v) v.textContent = Math.round(s.vol * 100) + '%';
   });
@@ -973,6 +1170,7 @@ function clearSlot(s, quiet){
   if (gains[s.id] && ctx){ try { gains[s.id].gain.setTargetAtTime(0, ctx.currentTime, 0.01); } catch (e) {} }
   s.raw = null; s.name = ''; s.dur = 0; s.offset = 0; s.max = 0; s.src = null; s.open = false;
   if (shiftId === s.id) shiftId = null;
+  if (lastRec && lastRec.id === s.id) lastRec = null;
   if (R && R.bufs[s.id]) delete R.bufs[s.id];
   saveSlotData(s);
   if (!content().length){ if (playing) pause(); R = null; A = null; B = null; paused = 0; zoomed = false; }
@@ -986,10 +1184,9 @@ function clearSlot(s, quiet){
 function removeSlot(s){
   const i = slots.indexOf(s);
   if (i <= 0) return;
-  const had = hasContent(s);
-  if (had) clearSlot(s, true);
+  if (hasContent(s)) clearSlot(s, true);
   slots.splice(i, 1);
-  DB.del('data-' + s.id).catch(() => {});
+  if (curSid != null) DB.del(dKey(curSid, s.id)).catch(() => {});
   updateCanvasHeight();
   if (zoomed) fitZoom(); else resetView();
   ui();
@@ -1023,9 +1220,10 @@ $('trackList').addEventListener('click', (e) => {
   } else if (act === 'open'){
     s.open = !s.open; ui();
   } else if (act === 'shift'){
+    if (locked){ lockedMsg(); return; }
     shiftId = shiftId === s.id ? null : s.id; ui();
   } else if (act === 'offzero'){
-    setOffset(s.id, 0, 0);
+    setOffset(s.id, refOffset(), 0);
   } else if (act === 'save'){
     shareBlob(wavBlob(s.raw, SR()), safeName(s.name || 'Ślad') + '.wav', 'audio/wav');
   }
@@ -1040,9 +1238,8 @@ $('trackList').addEventListener('input', (e) => {
 /* ---------- waveform ---------- */
 function updateCanvasHeight(){
   const n = Math.max(1, slots.length);
-  const base = window.innerWidth >= 700 ? 140 : 110;
-  const per = window.innerWidth >= 700 ? 66 : 54;
-  canvas.style.height = (base + per * n) + 'px';
+  const wide = window.innerWidth >= 700;
+  canvas.style.height = ((wide ? 140 : 110) + (wide ? 66 : 54) * n) + 'px';
   resize();
 }
 function resetView(){ view = { s: 0, e: timelineDur() }; buildPeaks(); }
@@ -1222,30 +1419,308 @@ function ui(){
   $('shiftNote').hidden = shiftId == null;
   if (shiftId != null) $('shiftNote').textContent = 'Przesuwasz ślad ' + (sIdx + 1) + ': przeciągnij palcem w bok. Wyłącz to w szczegółach śladu, żeby znów zaznaczać pętlę.';
   canvas.classList.toggle('shifting', shiftId != null);
+  canvas.classList.toggle('locked', locked);
 
   const has = content().length > 0;
   $('dur').textContent = '/ ' + fmt(has ? timelineDur() : 0);
   $('tA').textContent = fmt(A);
   $('tB').textContent = fmt(B);
   $('tLen').textContent = (A != null && B != null) ? 'pętla ' + secs(B - A) : 'brak pętli';
+  const lk = $('lock');
+  lk.innerHTML = locked ? ICON_LOCK : ICON_UNLOCK;
+  lk.setAttribute('aria-pressed', String(locked));
+  lk.setAttribute('aria-label', locked ? 'Odblokuj pętlę' : 'Zablokuj pętlę');
   const pb = $('play');
   pb.innerHTML = playing ? ICON_PAUSE : ICON_PLAY;
   pb.setAttribute('aria-label', playing ? 'Pauza' : 'Odtwarzaj');
   const hasLoop = A != null && B != null;
   const lb = $('loop');
-  lb.disabled = !hasLoop;
+  lb.disabled = !hasLoop || locked;
   lb.setAttribute('aria-pressed', String(hasLoop && loopOn));
   lb.textContent = 'Pętla: ' + (loopOn ? 'wł.' : 'wył.');
   const zb = $('zoom');
   zb.disabled = !hasLoop;
   zb.setAttribute('aria-pressed', String(zoomed));
   zb.textContent = zoomed ? 'Całość' : 'Powiększ';
-  $('clearLoop').disabled = A == null && B == null;
+  $('clearLoop').disabled = (A == null && B == null) || locked;
   $('tuneA').setAttribute('aria-pressed', String(tune === 'A'));
   $('tuneB').setAttribute('aria-pressed', String(tune === 'B'));
+  document.querySelectorAll('[data-d]').forEach((b) => { b.disabled = locked || !hasLoop; });
+  const m = sessMeta(curSid);
+  $('sessName').textContent = m ? m.name : 'Sesja';
   updateNow();
   draw();
   scheduleSave();
+}
+
+/* ---------- sessions ---------- */
+function resetRuntime(){
+  if (playing) pause();
+  killSources();
+  R = null; playR = null; renderDirty = false;
+  A = null; B = null; loopOn = true; locked = false; zoomed = false; shiftId = null; lastRec = null; paused = 0; tune = 'A';
+  armed = null; lastSig = '';
+}
+
+async function restoreData(src){
+  if (!src) return null;
+  const sr = SR();
+  let raw;
+  if (src.kind === 'file'){
+    raw = mixdown(await decode(src.data.slice(0)));
+  } else if (src.kind === 'pcm'){
+    raw = fromInt16(src.data);
+    if (src.sr && src.sr !== sr){
+      const P = src.sr / sr, y = new Float32Array(resampleLen(raw.length, P));
+      for (const f of resampleGen(raw, P, y)); raw = y;
+    }
+  } else return null;
+  return { raw, dur: raw.length / sr, max: absMax(raw), src: src.kind === 'file' ? src : { kind: 'pcm' }, name: src.name };
+}
+
+async function loadSession(sid){
+  resetRuntime();
+  curSid = sid; sessions.current = sid;
+  const st = await DB.get(stKey(sid)).catch(() => null);
+  nextId = 1;
+  if (!st || !st.slots || !st.slots.length){ slots = [newSlot()]; setTempo(0); setSemi(0); return; }
+  nextId = st.nextId || 1;
+  const out = [];
+  for (const m of st.slots.slice(0, MAX_TRACKS)){
+    const s = { id: m.id, name: m.name || '', raw: null, dur: 0, vol: m.vol != null ? m.vol : 1, offset: m.offset || 0, max: 0, src: null, open: false };
+    nextId = Math.max(nextId, m.id + 1);
+    if (m.has){
+      try {
+        const d = await restoreData(await DB.get(dKey(sid, m.id)));
+        if (d){ s.raw = d.raw; s.dur = d.dur; s.max = d.max; s.src = d.src; if (!s.name) s.name = d.name || ''; }
+      } catch (e) {}
+    }
+    out.push(s);
+  }
+  slots = out.length ? out : [newSlot()];
+  setTempo(st.tempoPct || 0); setSemi(st.semi || 0);
+  A = st.A != null ? st.A : null; B = st.B != null ? st.B : null;
+  loopOn = st.loopOn !== false; locked = !!st.locked;
+  clampMarks();
+  paused = A != null ? A : 0;
+}
+
+function afterLoad(){
+  updateCanvasHeight();
+  view = { s: 0, e: timelineDur() };
+  buildPeaks();
+  ui();
+  renderSessions();
+  doRender();
+}
+
+async function switchSession(sid){
+  if (rec || sid === curSid) return;
+  clearTimeout(saveTimer); await writeState();
+  restoring = true;
+  say('Otwieram sesję…', false, true);
+  await loadSession(sid);
+  restoring = false;
+  await writeState();
+  afterLoad();
+  say('Otwarta sesja „' + (sessMeta(sid) || {}).name + '”.');
+}
+
+async function newSession(name){
+  if (rec) return;
+  clearTimeout(saveTimer); await writeState();
+  const sid = sessions.nextSid++;
+  const now = Date.now();
+  sessions.list.push({ sid, name: name || defaultSessName(), created: now, updated: now, tracks: 0 });
+  restoring = true;
+  resetRuntime();
+  curSid = sid; sessions.current = sid;
+  nextId = 1; slots = [newSlot()]; setTempo(0); setSemi(0);
+  restoring = false;
+  await writeState();
+  afterLoad();
+  return sid;
+}
+
+async function copySession(){
+  if (rec || curSid == null) return;
+  clearTimeout(saveTimer); await writeState();
+  const from = curSid, m = sessMeta(from);
+  const sid = sessions.nextSid++;
+  const now = Date.now();
+  const st = stateObj();
+  await DB.put(stKey(sid), st);
+  for (const s of content()) await DB.put(dKey(sid, s.id), slotSrc(s));
+  sessions.list.push({ sid, name: (m ? m.name : 'Sesja') + ' (kopia)', created: now, updated: now, tracks: content().length });
+  await saveIndex();
+  await switchSession(sid);
+}
+
+async function deleteSession(sid){
+  const st = await DB.get(stKey(sid)).catch(() => null);
+  if (st && st.slots) for (const m of st.slots) await DB.del(dKey(sid, m.id)).catch(() => {});
+  await DB.del(stKey(sid)).catch(() => {});
+  sessions.list = sessions.list.filter((x) => x.sid !== sid);
+  if (sid === curSid){
+    curSid = null;
+    const next = sessions.list.slice().sort((a, b) => b.updated - a.updated)[0];
+    if (next){ restoring = true; await loadSession(next.sid); restoring = false; await writeState(); afterLoad(); }
+    else await newSession();
+  }
+  await saveIndex();
+  renderSessions();
+  say('Sesja usunięta.');
+}
+
+function renderSessions(){
+  const panel = $('sessPanel');
+  if (panel.hidden) return;
+  const list = sessions.list.slice().sort((a, b) => b.updated - a.updated);
+  $('sessList').innerHTML = list.map((m) => {
+    const d = new Date(m.updated || m.created || Date.now());
+    const date = d.getDate() + '.' + (d.getMonth() + 1) + '.' + d.getFullYear() + ', ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+    const cur = m.sid === curSid;
+    const del = isArmed('sdel', m.sid);
+    return '<div class="sess-row" data-sid="' + m.sid + '">' +
+      '<div class="sess-info"><b>' + esc(m.name) + '</b><small>' + date + ' · ' + tracksWord(m.tracks || 0) + '</small></div>' +
+      (cur ? '<span class="sess-cur">otwarta</span>' : '<button class="btn sm" type="button" data-sact="open">Otwórz</button>') +
+      '<button class="btn sm' + (del ? ' warn' : '') + '" type="button" data-sact="del">' + (del ? 'Na pewno?' : 'Usuń') + '</button>' +
+      '</div>';
+  }).join('');
+}
+function toggleSessPanel(force){
+  const p = $('sessPanel');
+  p.hidden = force != null ? !force : !p.hidden;
+  $('sessBtn').setAttribute('aria-expanded', String(!p.hidden));
+  $('renameRow').hidden = true;
+  renderSessions();
+}
+
+$('sessBtn').addEventListener('click', () => toggleSessPanel());
+$('sessNew').addEventListener('click', async () => { await newSession(); renderSessions(); say('Nowa sesja. Wczytaj albo nagraj pierwszy ślad.'); });
+$('sessCopy').addEventListener('click', () => copySession());
+$('sessRename').addEventListener('click', () => {
+  const row = $('renameRow');
+  row.hidden = !row.hidden;
+  if (!row.hidden){ const m = sessMeta(curSid); $('renameIn').value = m ? m.name : ''; $('renameIn').focus(); $('renameIn').select(); }
+});
+function doRename(){
+  const v = $('renameIn').value.trim();
+  const m = sessMeta(curSid);
+  if (!v || !m) return;
+  m.name = v.slice(0, 60);
+  $('renameRow').hidden = true;
+  saveIndex(); ui(); renderSessions();
+}
+$('renameOk').addEventListener('click', doRename);
+$('renameIn').addEventListener('keydown', (e) => { if (e.key === 'Enter'){ e.preventDefault(); doRename(); } });
+$('sessList').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-sact]');
+  if (!b) return;
+  const sid = +b.closest('.sess-row').dataset.sid;
+  if (b.dataset.sact === 'open') switchSession(sid);
+  else if (b.dataset.sact === 'del'){
+    if (!isArmed('sdel', sid)){ arm('sdel', sid); return; }
+    armed = null; deleteSession(sid);
+  }
+});
+
+/* session file: "LOOPERS1" + uint32 JSON length + JSON + payloads */
+function exportSession(){
+  const m = sessMeta(curSid);
+  const name = m ? m.name : 'Sesja';
+  const meta = { format: 'looper-session', version: 1, name, tempoPct, semi, A, B, loopOn, locked, tracks: [] };
+  const parts = [];
+  for (const s of slots){
+    if (!hasContent(s)){ meta.tracks.push({ empty: true, vol: s.vol }); continue; }
+    const src = slotSrc(s);
+    const bytes = new Uint8Array(src.data);
+    meta.tracks.push({ name: s.name, vol: s.vol, offset: s.offset, kind: src.kind, sr: src.sr || null, bytes: bytes.length });
+    parts.push(bytes);
+  }
+  const json = new TextEncoder().encode(JSON.stringify(meta));
+  const head = new Uint8Array(12);
+  head.set([76, 79, 79, 80, 69, 82, 83, 49]);
+  new DataView(head.buffer).setUint32(8, json.length, true);
+  shareBlob(new Blob([head, json].concat(parts), { type: 'application/octet-stream' }), safeName(name) + '.looper', 'application/octet-stream');
+}
+async function importSessionFile(file){
+  if (!file) return;
+  say('Otwieram plik sesji…', false, true);
+  try {
+    const buf = await file.arrayBuffer();
+    const u8 = new Uint8Array(buf);
+    if (String.fromCharCode.apply(null, u8.subarray(0, 8)) !== 'LOOPERS1') throw new Error('to nie jest plik sesji Loopera');
+    const jl = new DataView(buf).getUint32(8, true);
+    const meta = JSON.parse(new TextDecoder().decode(u8.subarray(12, 12 + jl)));
+    let p = 12 + jl;
+    clearTimeout(saveTimer); await writeState();
+    const sid = sessions.nextSid++;
+    const now = Date.now();
+    const st = { v: 3, nextId: 1, tempoPct: meta.tempoPct || 0, semi: meta.semi || 0, A: meta.A != null ? meta.A : null, B: meta.B != null ? meta.B : null, loopOn: meta.loopOn !== false, locked: !!meta.locked, slots: [] };
+    let n = 0;
+    for (const t of (meta.tracks || []).slice(0, MAX_TRACKS)){
+      const id = st.nextId++;
+      if (t.empty){ st.slots.push({ id, name: '', vol: t.vol != null ? t.vol : 1, offset: 0, has: false }); continue; }
+      const data = buf.slice(p, p + t.bytes); p += t.bytes;
+      const src = t.kind === 'file' ? { kind: 'file', name: t.name, data } : { kind: 'pcm', sr: t.sr, name: t.name, data };
+      await DB.put(dKey(sid, id), src);
+      st.slots.push({ id, name: t.name || '', vol: t.vol != null ? t.vol : 1, offset: t.offset || 0, has: true });
+      n++;
+    }
+    if (!st.slots.length) st.slots.push({ id: st.nextId++, name: '', vol: 1, offset: 0, has: false });
+    await DB.put(stKey(sid), st);
+    let name = meta.name || file.name.replace(/\.[^.]+$/, '');
+    if (sessions.list.some((x) => x.name === name)) name += ' (z pliku)';
+    sessions.list.push({ sid, name, created: now, updated: now, tracks: n });
+    await saveIndex();
+    await switchSession(sid);
+    say('Otwarta sesja z pliku: „' + name + '”.');
+  } catch (err) {
+    say('Nie udało się otworzyć pliku sesji: ' + (err && err.message ? err.message : err) + '.', true);
+  }
+}
+$('sessExport').addEventListener('click', () => { if (!rec) exportSession(); });
+$('sessImport').addEventListener('click', () => { if (!rec) $('sessFileIn').click(); });
+$('sessFileIn').addEventListener('change', (e) => { const f = e.target.files && e.target.files[0]; e.target.value = ''; importSessionFile(f); });
+
+async function initSessions(){
+  let idx = await DB.get('sessions').catch(() => null);
+  if (idx && idx.list && idx.list.length){ sessions = idx; return; }
+  let st2 = await DB.get('state2').catch(() => null);
+  if (!st2) st2 = await migrateV1();
+  sessions = { current: 1, nextSid: 2, list: [] };
+  const now = Date.now();
+  if (st2 && st2.slots && st2.slots.some((x) => x.has)){
+    for (const m of st2.slots){
+      if (!m.has) continue;
+      const d = await DB.get('data-' + m.id).catch(() => null);
+      if (d) await DB.put(dKey(1, m.id), d);
+      await DB.del('data-' + m.id).catch(() => {});
+    }
+    await DB.put(stKey(1), Object.assign({}, st2, { v: 3, locked: false }));
+    sessions.list.push({ sid: 1, name: 'Moja sesja', created: now, updated: now, tracks: st2.slots.filter((x) => x.has).length });
+  } else {
+    sessions.list.push({ sid: 1, name: defaultSessName(), created: now, updated: now, tracks: 0 });
+  }
+  await DB.del('state2').catch(() => {});
+  await saveIndex();
+}
+async function migrateV1(){
+  const t0s = await DB.get('track0').catch(() => null), t1s = await DB.get('track1').catch(() => null);
+  if (!t0s && !t1s) return null;
+  const st = await DB.get('state').catch(() => null) || {};
+  const meta = [];
+  const list = [t0s, t1s];
+  let id = 1;
+  for (let k = 0; k < 2; k++){
+    if (!list[k]) continue;
+    await DB.put('data-' + id, list[k]);
+    meta.push({ id, name: list[k].name || '', vol: st.vols && st.vols[k] != null ? st.vols[k] : 1, offset: k === 1 ? (st.offset || 0) : 0, has: true });
+    id++;
+  }
+  await Promise.all(['track0', 'track1', 'state'].map((k) => DB.del(k).catch(() => {})));
+  return { v: 2, nextId: id, tempoPct: st.tempoPct || 0, semi: st.semi || 0, A: st.A != null ? st.A : null, B: st.B != null ? st.B : null, loopOn: st.loopOn !== false, slots: meta };
 }
 
 /* ---------- recording ---------- */
@@ -1255,7 +1730,7 @@ function latencyEstimate(stream){
   let inp = 0;
   try { const s = stream.getAudioTracks()[0].getSettings(); if (typeof s.latency === 'number') inp = s.latency; } catch (e) {}
   if (!inp) inp = 0.005;
-  return out + inp + latencyMs / 1000;
+  return out + inp;
 }
 
 async function startRecording(id){
@@ -1364,7 +1839,7 @@ async function finishRecording(){
     const skip = Math.max(0, Math.round((r.when - F0 / sr) * sr));
     if (skip > 0 && skip < raw.length - sr * 0.1) raw = raw.slice(skip);
   }
-  const tau0 = r.free ? 0 : r.tauPlay + (F0 / sr - r.when - r.L) * r.T;
+  const tau0 = r.free ? 0 : r.tauPlay + (F0 / sr - r.when - r.L) * r.T + (learnMs / 1000) * r.T;
   let take = raw;
   if (r.T !== 1 || r.P !== 1){
     try { take = await convertTake(raw, r.T, r.P); }
@@ -1373,6 +1848,7 @@ async function finishRecording(){
   const wasEmpty = !content().length;
   s.raw = take; s.dur = take.length / sr; s.name = 'Nagranie ' + hhmm(); s.max = absMax(take); s.src = { kind: 'pcm' };
   s.offset = r.free ? 0 : Math.max(-s.dur + 0.05, tau0);
+  lastRec = r.free ? null : { id: s.id, T: r.T, orig: s.offset, base: learnMs };
   if (R && R.bufs[s.id]) delete R.bufs[s.id];
   if (wasEmpty){ A = null; B = null; paused = 0; zoomed = false; }
   clampMarks();
@@ -1380,7 +1856,7 @@ async function finishRecording(){
   ui();
   scheduleRender(0);
   saveSlotData(s);
-  say('Gotowe: ' + s.name.toLowerCase() + ' (' + secs(s.dur) + ').' + (r.free ? '' : ' Jeśli rozjeżdża się z podkładem, przesuń ślad albo ustaw korektę opóźnienia.'));
+  say('Gotowe: ' + s.name.toLowerCase() + ' (' + secs(s.dur) + ').' + (r.free ? '' : ' Jeśli rozjeżdża się z podkładem, popraw je strzałkami ‹ › przy śladzie.'));
 }
 
 /* ---------- export ---------- */
@@ -1411,8 +1887,7 @@ async function shareBlob(blob, filename, type){
 }
 
 function bounceUI(state){
-  const sheet = $('bounceSheet');
-  sheet.hidden = state === 'closed';
+  $('bounceSheet').hidden = state === 'closed';
   $('bounceChoice').hidden = state !== 'choose';
   $('bounceProg').hidden = state !== 'busy';
   $('bounceDone').hidden = state !== 'done';
@@ -1442,7 +1917,8 @@ function doBounce(onlyLoop){
   }
   let m = 0; for (let i = 0; i < out.length; i++){ const q = Math.abs(out[i]); if (q > m) m = q; }
   if (m > 0.99){ const k = 0.99 / m; for (let i = 0; i < out.length; i++) out[i] *= k; }
-  const parts = ['Looper ' + hhmm()];
+  const sm = sessMeta(curSid);
+  const parts = [sm ? sm.name : 'Looper ' + hhmm()];
   if (onlyLoop && loopActive()) parts.push('pętla');
   if (tempoPct) parts.push('tempo ' + (tempoPct > 0 ? '+' : '') + tempoPct + '%');
   if (semi) parts.push((semi > 0 ? '+' : '') + semi + ' pt');
@@ -1463,13 +1939,14 @@ function doBounce(onlyLoop){
       $('bounceTitle').textContent = 'Gotowe: ' + bounceName + ' (' + (bounceBlob.size / 1e6).toFixed(1).replace('.', ',') + ' MB)';
     }
   };
-  worker.onerror = () => { worker.terminate(); bounceWorker = null; bounceUI('closed'); say('Nie udało się zgrać MP3. Sprawdź, czy aplikacja jest otwarta z ikonki albo ze strony GitHub.', true); };
+  worker.onerror = () => { worker.terminate(); bounceWorker = null; bounceUI('closed'); say('Nie udało się zgrać MP3.', true); };
   worker.postMessage({ pcm: out, sr, kbps: 160 }, [out.buffer]);
 }
 
 /* ---------- pointer on waveform ---------- */
 canvas.addEventListener('pointerdown', (e) => {
   if (!content().length || rec) return;
+  if (locked){ lockedMsg(); return; }
   e.preventDefault();
   try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
   const r = canvas.getBoundingClientRect();
@@ -1499,7 +1976,7 @@ canvas.addEventListener('pointermove', (e) => {
     s.offset = clampOffset(s, drag.off0 + (x - drag.x0) / drag.w * drag.span);
     buildPeaks();
     const o = document.querySelector('.track[data-id="' + s.id + '"] .off-out');
-    if (o) o.textContent = signed(s.offset, 3) + ' s';
+    if (o) o.textContent = signed(s.offset - refOffset(), 3) + ' s';
     draw();
     return;
   }
@@ -1524,7 +2001,7 @@ function endDrag(cancel){
   if (d.mode === 'select'){
     if (B - A < MIN_LOOP) B = Math.min(timelineDur(), A + MIN_LOOP);
     afterMarkerChange('A');
-    say('Pętla ' + fmt(A) + ' – ' + fmt(B) + '.');
+    say('Pętla ' + fmt(A) + ' – ' + fmt(B) + '. Dostrój ją przyciskami ±.');
     return;
   }
   afterMarkerChange(d.mode);
@@ -1534,8 +2011,7 @@ canvas.addEventListener('pointercancel', () => endDrag(true));
 
 /* ---------- controls ---------- */
 $('play').addEventListener('click', togglePlay);
-$('setA').addEventListener('click', setA);
-$('setB').addEventListener('click', setB);
+$('lock').addEventListener('click', toggleLock);
 $('toA').addEventListener('click', toA);
 $('loop').addEventListener('click', toggleLoop);
 $('zoom').addEventListener('click', toggleZoom);
@@ -1550,20 +2026,19 @@ $('bounceLoop').addEventListener('click', () => doBounce(true));
 $('bounceCancel').addEventListener('click', cancelBounce);
 $('bounceClose').addEventListener('click', cancelBounce);
 $('bounceShare').addEventListener('click', () => { if (bounceBlob) shareBlob(bounceBlob, bounceName, 'audio/mpeg'); });
-$('latMinus').addEventListener('click', () => setLatency(latencyMs - 5));
-$('latPlus').addEventListener('click', () => setLatency(latencyMs + 5));
+$('learnReset').addEventListener('click', () => { learnMs = 0; lastRec = null; try { localStorage.setItem('looper.learnMs', '0'); } catch (e) {} setLearnUI(); say('Zapamiętana poprawka wyzerowana.'); });
 document.querySelectorAll('[data-pre]').forEach((b) => b.addEventListener('click', () => setPreroll(parseFloat(b.dataset.pre))));
 $('wipe').addEventListener('click', () => {
   const b = $('wipe');
-  if (b.dataset.armed !== '1'){ b.dataset.armed = '1'; b.textContent = 'Na pewno? Stuknij jeszcze raz'; setTimeout(() => { b.dataset.armed = ''; b.textContent = 'Usuń wszystko'; }, 4000); return; }
-  b.dataset.armed = ''; b.textContent = 'Usuń wszystko';
+  if (b.dataset.armed !== '1'){ b.dataset.armed = '1'; b.textContent = 'Na pewno?'; setTimeout(() => { b.dataset.armed = ''; b.textContent = 'Wyczyść'; }, 4000); return; }
+  b.dataset.armed = ''; b.textContent = 'Wyczyść';
   if (playing) pause();
-  for (const s of slots) DB.del('data-' + s.id).catch(() => {});
+  for (const s of slots) if (curSid != null) DB.del(dKey(curSid, s.id)).catch(() => {});
   slots = [newSlot()];
-  R = null; A = null; B = null; paused = 0; zoomed = false; shiftId = null;
+  R = null; A = null; B = null; paused = 0; zoomed = false; shiftId = null; lastRec = null; locked = false;
   setTempo(0); setSemi(0);
   updateCanvasHeight(); resetView(); ui(); scheduleSave(true);
-  say('Wszystko usunięte. Zaczynasz od pustego śladu.');
+  say('Sesja wyczyszczona.');
 });
 
 const tempoEl = $('tempo'), semiEl = $('semi');
@@ -1578,7 +2053,7 @@ $('semiMinus').addEventListener('click', () => { setSemi(semi - 1); scheduleRend
 $('semiPlus').addEventListener('click', () => { setSemi(semi + 1); scheduleRender(450); });
 $('semiZero').addEventListener('click', () => { if (semi !== 0){ setSemi(0); scheduleRender(0); } });
 
-/* ---------- loading files ---------- */
+/* ---------- loading files (audio or video) ---------- */
 function mixdown(buf){
   const n = buf.numberOfChannels;
   if (n === 1) return buf.getChannelData(0);
@@ -1602,21 +2077,36 @@ function decode(ab){
 async function loadInto(id, file){
   const s = slotById(id);
   if (!file || !s) return;
-  say('Wczytuję „' + file.name + '”…', false, true);
-  let raw, keep;
+  const isVideo = /^video\//.test(file.type) || /\.(mov|mp4|m4v|3gp)$/i.test(file.name);
+  say(isVideo ? 'Wyciągam dźwięk z filmu…' : 'Wczytuję „' + file.name + '”…', false, true);
+  let raw, src;
+  const name = file.name.replace(/\.[^.]+$/, '');
   try {
     const ab = await file.arrayBuffer();
-    keep = ab.slice(0);
-    raw = mixdown(await decode(ab));
+    if (isVideo){
+      let decoded = null, firstErr = null;
+      try { decoded = await decode(mp4AacToAdts(ab)); } catch (e) { firstErr = e; }
+      if (!decoded){
+        try { decoded = await decode(ab.slice(0)); }
+        catch (e) { throw (firstErr && /no audio track/.test(firstErr.message)) ? new Error('noaudio') : e; }
+      }
+      raw = mixdown(decoded);
+      src = { kind: 'pcm' };
+    } else {
+      const keep = ab.slice(0);
+      raw = mixdown(await decode(ab));
+      src = { kind: 'file', name, data: keep };
+    }
   } catch (err) {
-    say('Nie udało się odczytać pliku „' + file.name + '”. Spróbuj nagrania m4a, mp3 lub wav. Bardzo długie nagranie warto najpierw przyciąć w Dyktafonie.', true);
+    if (err && err.message === 'noaudio') say('Ten film nie ma ścieżki dźwiękowej.', true);
+    else say('Nie udało się odczytać pliku „' + file.name + '”. Spróbuj nagrania m4a, mp3, wav albo filmu z galerii.', true);
     return;
   }
   if (playing) pause();
   const onlyOne = content().filter((x) => x.id !== id).length === 0;
-  const name = file.name.replace(/\.[^.]+$/, '');
-  s.raw = raw; s.dur = raw.length / SR(); s.name = name; s.max = absMax(raw); s.offset = 0;
-  s.src = { kind: 'file', name, data: keep };
+  s.raw = raw; s.dur = raw.length / SR(); s.name = name; s.max = absMax(raw); s.offset = onlyOne ? 0 : refOffset();
+  s.src = src;
+  if (lastRec && lastRec.id === id) lastRec = null;
   if (R && R.bufs[id]) delete R.bufs[id];
   if (onlyOne){ A = null; B = null; paused = 0; zoomed = false; loopOn = true; tune = 'A'; }
   clampMarks();
@@ -1624,7 +2114,8 @@ async function loadInto(id, file){
   ui();
   scheduleRender(0);
   saveSlotData(s);
-  say('Gotowe. Stuknij ▶, a potem Ustaw A i Ustaw B.');
+  if (isVideo && s.max < 0.002) say('Dźwięk z filmu jest prawie cichy. Niektóre aplikacje (np. Apple Music) wyciszają nagrywanie ekranu.', true);
+  else say('Gotowe. Przeciągnij palcem po przebiegu, żeby zaznaczyć pętlę.');
 }
 
 $('fileIn').addEventListener('change', (e) => {
@@ -1642,6 +2133,7 @@ document.addEventListener('drop', (e) => {
   tracksCard.classList.remove('drop');
   const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
   if (!f || rec) return;
+  if (/\.looper$/i.test(f.name)){ importSessionFile(f); return; }
   let s = slots.find((x) => !hasContent(x));
   if (!s && slots.length < MAX_TRACKS){ s = newSlot(); slots.push(s); updateCanvasHeight(); }
   if (!s) s = slots[0];
@@ -1657,6 +2149,7 @@ document.addEventListener('keydown', (e) => {
   if (k === ' '){ e.preventDefault(); togglePlay(); }
   else if (k === 'a' || k === 'A'){ setA(); }
   else if (k === 'b' || k === 'B'){ setB(); }
+  else if (k === 'l' || k === 'L'){ toggleLock(); }
   else if (k === 'ArrowLeft'){ e.preventDefault(); nudge(e.shiftKey ? -0.1 : -0.01); }
   else if (k === 'ArrowRight'){ e.preventDefault(); nudge(e.shiftKey ? 0.1 : 0.01); }
 });
@@ -1666,6 +2159,7 @@ document.addEventListener('visibilitychange', () => {
   if (!document.hidden) return;
   if (rec) stopRecording();
   else if (playing) pause();
+  clearTimeout(saveTimer); if (!restoring) writeState();
 });
 if (window.ResizeObserver) new ResizeObserver(resize).observe(canvas);
 window.addEventListener('resize', () => updateCanvasHeight());
@@ -1681,85 +2175,26 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
 }
 try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch (e) {}
 
-/* ---------- last session ---------- */
-async function restoreData(src){
-  if (!src) return null;
-  const sr = SR();
-  let raw;
-  if (src.kind === 'file'){
-    raw = mixdown(await decode(src.data.slice(0)));
-  } else if (src.kind === 'pcm'){
-    raw = fromInt16(src.data);
-    if (src.sr && src.sr !== sr){
-      const P = src.sr / sr, y = new Float32Array(resampleLen(raw.length, P));
-      for (const f of resampleGen(raw, P, y)); raw = y;
-    }
-  } else return null;
-  return { raw, dur: raw.length / sr, max: absMax(raw), src: src.kind === 'file' ? src : { kind: 'pcm' }, name: src.name };
-}
-
-async function migrateV1(){
-  const t0s = await DB.get('track0').catch(() => null), t1s = await DB.get('track1').catch(() => null);
-  if (!t0s && !t1s) return null;
-  const st = await DB.get('state').catch(() => null) || {};
-  const meta = [];
-  const list = [t0s, t1s];
-  for (let k = 0; k < 2; k++){
-    if (!list[k]) continue;
-    const id = nextId++;
-    await DB.put('data-' + id, list[k]);
-    meta.push({ id, name: list[k].name || '', vol: st.vols && st.vols[k] != null ? st.vols[k] : 1, offset: k === 1 ? (st.offset || 0) : 0, has: true });
-  }
-  const st2 = { v: 2, nextId, tempoPct: st.tempoPct || 0, semi: st.semi || 0, A: st.A != null ? st.A : null, B: st.B != null ? st.B : null, loopOn: st.loopOn !== false, slots: meta };
-  await DB.put('state2', st2);
-  await Promise.all(['track0', 'track1', 'state'].map((k) => DB.del(k).catch(() => {})));
-  return st2;
-}
-
-async function restore(){
-  let st = await DB.get('state2').catch(() => null);
-  if (!st) st = await migrateV1();
-  if (!st || !st.slots || !st.slots.length) return false;
-  nextId = Math.max(nextId, st.nextId || 1);
-  say('Wczytuję ostatnią sesję…', false, true);
-  const out = [];
-  for (const m of st.slots.slice(0, MAX_TRACKS)){
-    const s = { id: m.id, name: m.name || '', raw: null, dur: 0, vol: m.vol != null ? m.vol : 1, offset: m.offset || 0, max: 0, src: null, open: false };
-    nextId = Math.max(nextId, m.id + 1);
-    if (m.has){
-      try {
-        const d = await restoreData(await DB.get('data-' + m.id));
-        if (d){ s.raw = d.raw; s.dur = d.dur; s.max = d.max; s.src = d.src; if (!s.name) s.name = d.name || ''; }
-      } catch (e) {}
-    }
-    out.push(s);
-  }
-  slots = out.length ? out : [newSlot()];
-  setTempo(st.tempoPct || 0); setSemi(st.semi || 0);
-  A = st.A != null ? st.A : null; B = st.B != null ? st.B : null;
-  loopOn = st.loopOn !== false;
-  clampMarks();
-  paused = A != null ? A : 0;
-  say('');
-  return true;
-}
-
+/* ---------- start ---------- */
 try { getCtx(); } catch (e) { say('Ta przeglądarka nie obsługuje odtwarzania dźwięku przez Web Audio.', true); }
-updateFx(); setLatUI(); setPreroll(preroll);
+updateFx(); setLearnUI(); setPreroll(preroll);
 slots = [newSlot()];
 updateCanvasHeight();
 ui();
 (async () => {
-  let ok = false;
-  try { ok = await restore(); } catch (e) { ok = false; }
-  if (!ok){ slots = [newSlot()]; A = null; B = null; paused = 0; }
+  try {
+    await initSessions();
+    const sid = sessMeta(sessions.current) ? sessions.current : sessions.list[0].sid;
+    say('Wczytuję sesję…', false, true);
+    await loadSession(sid);
+    say('');
+  } catch (e) {
+    sessions = { current: 1, nextSid: 2, list: [{ sid: 1, name: defaultSessName(), created: Date.now(), updated: Date.now(), tracks: 0 }] };
+    curSid = 1; slots = [newSlot()];
+  }
   restoring = false;
-  updateCanvasHeight();
-  view = { s: 0, e: timelineDur() };
-  buildPeaks();
-  ui();
-  scheduleSave(true);
-  doRender();
+  await writeState();
+  afterLoad();
 })();
 })();
 </script>
