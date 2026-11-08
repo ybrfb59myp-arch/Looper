@@ -1,0 +1,3149 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Looper</title>
+<meta name="description" content="Zapętlanie nagrań z Dyktafonu, tempo i tonacja, kilka śladów, dogrywanie i sesje.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Looper">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#eef0f4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#12141a" media="(prefers-color-scheme: dark)">
+<style>
+:root{
+  /* Taken from the app icon: navy graphite, amber dot, red waveform, white loop. */
+  --bg:#eef0f4;
+  --panel:#ffffff;
+  --sunk:#f3f4f7;
+  --ink:#161922;
+  --muted:#5d6370;
+  --line:#d7dbe3;
+  --wave:#b8bdc8;
+  --accent:#ffb800;
+  --accent-ink:#8f6200;
+  --accent-soft:rgba(255,184,0,.22);
+  --on-accent:#1a1300;
+  --hot:#d42a40;
+  --hot-soft:rgba(212,42,64,.10);
+  --rec:#d92d3a;
+  --rec-soft:rgba(217,45,58,.10);
+  --danger:#b3261e;
+  --font-ui:system-ui, -apple-system, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+  --font-num:ui-monospace, "SF Mono", Menlo, Consolas, "Roboto Mono", monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#12141a; --panel:#1b1e27; --sunk:#151820; --ink:#f2f3f6; --muted:#9ba1ae; --line:#2c303b;
+    --wave:#474c59; --accent:#ffb800; --accent-ink:#ffc94d; --accent-soft:rgba(255,184,0,.16); --on-accent:#1a1300;
+    --hot:#ee3a4e; --hot-soft:rgba(238,58,78,.14); --rec:#ff4752; --rec-soft:rgba(255,71,82,.14); --danger:#ff8a80;
+    color-scheme: dark;
+  }
+}
+
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-ui);-webkit-text-size-adjust:100%;line-height:1.4;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+input[type="text"]{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+.app{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:14px;
+  padding:calc(10px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(32px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left))}
+
+.btn{appearance:none;-webkit-appearance:none;font:inherit;font-weight:700;font-size:.95rem;
+  border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:12px;
+  padding:10px 12px;min-height:44px;cursor:pointer;touch-action:manipulation;
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;text-align:center;
+  -webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+.btn:active{transform:translateY(1px)}
+.btn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.btn:disabled{opacity:.4;cursor:default}
+.btn[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent)}
+.btn.accent{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn.sm{min-height:40px;padding:6px 8px;font-size:.85rem;border-radius:10px}
+.btn.xs{min-height:34px;min-width:38px;padding:4px 8px;font-size:.9rem;border-radius:9px}
+.btn.warn{border-color:var(--rec);color:var(--rec)}
+
+/* session bar */
+.sessbar{display:flex;align-items:center;gap:8px}
+.sess-btn{flex:1;min-width:0;display:flex;align-items:center;gap:8px;background:none;border:0;padding:6px 0;color:var(--ink);font:inherit;font-weight:800;font-size:1rem;cursor:pointer;text-align:left;-webkit-tap-highlight-color:transparent}
+.sess-btn span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sess-btn svg{flex:none;color:var(--muted)}
+.sess-btn .chev{transition:transform .15s}
+.sess-btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+.sess-btn:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:6px}
+.net{flex:none;font-size:.75rem;font-weight:700;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:3px 9px}
+.sess-list{display:flex;flex-direction:column}
+.sess-row{display:flex;align-items:center;gap:8px;padding:8px 0}
+.sess-row + .sess-row{border-top:1px solid var(--line)}
+.sess-info{flex:1;min-width:0}
+.sess-info b{display:block;font-size:.92rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sess-info small{color:var(--muted);font-size:.78rem}
+.sess-cur{font-size:.78rem;font-weight:800;color:var(--accent-ink);padding:0 6px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.rename{display:flex;gap:8px}
+.rename input{flex:1;min-width:0;font:inherit;font-size:1rem;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
+.rename input:focus-visible{outline:3px solid var(--accent);outline-offset:1px}
+.note{margin:0;font-size:.8rem;color:var(--muted)}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.card.drop{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+
+/* parts + sequence */
+.parts-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.part-seg .btn{min-width:52px;font-size:1.05rem;font-weight:800;position:relative}
+.part-seg .btn.has::after{content:"";position:absolute;top:7px;right:8px;width:6px;height:6px;border-radius:50%;background:var(--hot)}
+.part-seg .btn[aria-pressed="true"].has::after{background:var(--on-accent)}
+.mode-seg .btn{min-width:0;padding:6px 12px;font-size:.85rem}
+.parts-top .spacer{flex:1}
+.copy-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;border-radius:12px;background:var(--sunk);border:1px solid var(--line);font-size:.88rem;font-weight:700}
+.copy-row > span{flex:1 1 140px}
+.copy-targets{display:flex;gap:6px}
+.copy-targets .btn{min-width:52px;font-weight:800}
+.seq-body{display:flex;flex-direction:column;gap:10px}
+#partsCard.collapsed .seq-body{display:none}
+#partsCard.collapsed .collapse-btn svg{transform:rotate(180deg)}
+.seq-label{font-size:.72rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.seq-strip{display:flex;gap:8px;overflow-x:auto;padding:8px 2px 4px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.seq-strip::-webkit-scrollbar{display:none}
+.step{flex:none;appearance:none;-webkit-appearance:none;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:12px;min-width:62px;height:46px;padding:0 12px;
+  font:inherit;font-weight:800;font-size:1.05rem;display:inline-flex;align-items:center;justify-content:center;gap:1px;position:relative;cursor:pointer;-webkit-tap-highlight-color:transparent;font-variant-numeric:tabular-nums}
+.step b{color:var(--accent-ink)}
+.step .x{color:var(--muted);font-weight:600;margin:0 2px}
+.step.editing{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.step.playing{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.step.playing b,.step.playing .x{color:var(--on-accent)}
+.step .cnt{position:absolute;top:-9px;right:-6px;font-size:.66rem;font-weight:800;background:var(--ink);color:var(--bg);border-radius:999px;padding:1px 6px;display:none}
+.step.playing .cnt{display:block}
+.step.empty{opacity:.4}
+.step.add{min-width:46px;color:var(--muted);font-size:1.3rem}
+.step:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.picker{display:flex;flex-direction:column;gap:10px;padding:10px;border-radius:12px;background:var(--sunk);border:1px solid var(--line)}
+.wheels{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:8px;height:200px}
+.wheel-band{position:absolute;left:0;right:0;top:80px;height:40px;border-radius:12px;background:var(--panel);border:1px solid var(--line);pointer-events:none}
+.wheel{position:relative;height:200px;overflow-y:scroll;scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;text-align:center;
+  -webkit-mask-image:linear-gradient(transparent,#000 32%,#000 68%,transparent);mask-image:linear-gradient(transparent,#000 32%,#000 68%,transparent)}
+.wheel::-webkit-scrollbar{display:none}
+.wheel-pad{height:80px}
+.wheel-item{height:40px;line-height:40px;scroll-snap-align:center;font-size:1.45rem;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink);cursor:pointer;transform-origin:center}
+.wheel-cap{display:grid;grid-template-columns:1fr 1fr;gap:8px;text-align:center;font-size:.72rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:-4px}
+.grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1.3fr;gap:8px}
+.part-view{display:flex;flex-direction:column;gap:14px}
+
+/* tracks */
+.trk-list{display:flex;flex-direction:column}
+.track{display:flex;flex-direction:column;gap:8px;padding:10px 0}
+.track:first-child{padding-top:0}
+.track + .track{border-top:1px solid var(--line)}
+.trk-head{display:flex;align-items:center;gap:8px}
+.badge{flex:none;width:26px;height:26px;border-radius:8px;background:var(--ink);color:var(--bg);display:grid;place-items:center;font-weight:800;font-size:.85rem}
+.trk-name{flex:1;min-width:0;display:flex;align-items:center;gap:6px;background:none;border:0;color:var(--ink);font:inherit;font-weight:700;font-size:.95rem;padding:4px 0;text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.trk-name span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.trk-name svg{flex:none;color:var(--muted);transition:transform .15s}
+.trk-name[aria-expanded="true"] svg{transform:rotate(180deg)}
+.trk-name.empty{color:var(--muted);font-weight:600;cursor:default}
+.trk-name:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:6px}
+.trk-btns{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.trk-btns.three{grid-template-columns:repeat(3,1fr)}
+.btn.recb{color:var(--rec);border-color:var(--rec)}
+.btn.recb .dot{width:10px;height:10px;border-radius:50%;background:var(--rec);flex:none}
+.btn.recb.rec-active{background:var(--rec);color:#fff}
+.btn.recb.rec-active .dot{background:#fff;border-radius:2px;animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:.35}}
+.shift-line{display:flex;align-items:center;gap:6px}
+.shift-line .lbl{flex:1;font-size:.8rem;font-weight:700;color:var(--muted)}
+.shift-line output{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:.85rem;font-weight:700;min-width:5.6em;text-align:center}
+.shift-line .btn{font-family:var(--font-num);font-weight:700;letter-spacing:-.06em}
+.trk-more{display:flex;flex-direction:column;gap:8px;padding:10px;border-radius:12px;background:var(--sunk);border:1px solid var(--line)}
+.slider-line{display:grid;grid-template-columns:auto 1fr 3.4em;align-items:center;gap:10px;font-size:.82rem;color:var(--muted);font-weight:700}
+.slider-line output{font-family:var(--font-num);font-variant-numeric:tabular-nums;color:var(--ink);text-align:right;font-weight:500}
+.trk-foot{display:grid;grid-template-columns:1fr 1fr;gap:8px;border-top:1px solid var(--line);padding-top:10px}
+.trk-top{display:flex;align-items:center;gap:8px;margin:-4px 0 -2px}
+.trk-toggle{flex:1;min-width:0;display:flex;align-items:center;gap:8px;background:none;border:0;padding:4px 0;color:var(--muted);font:inherit;
+  font-size:.78rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;cursor:pointer;text-align:left;-webkit-tap-highlight-color:transparent}
+.trk-toggle:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:6px}
+.trk-mini{display:none;gap:6px}
+.trk-mini .btn{min-height:36px;padding:4px 10px;font-size:.82rem}
+.collapse-btn{flex:none;width:36px;height:36px;min-height:36px;padding:0;border-radius:10px}
+.collapse-btn svg{transition:transform .15s}
+#tracks.collapsed .collapse-btn svg{transform:rotate(180deg)}
+#tracks.collapsed .trk-list,#tracks.collapsed .trk-foot{display:none}
+#tracks.collapsed .trk-mini{display:flex}
+#tracks.collapsed{padding:8px 12px}
+#tracks.collapsed .trk-top{margin:0}
+.sheet{display:flex;flex-direction:column;gap:8px;padding:10px;border-radius:12px;background:var(--sunk);border:1px solid var(--line)}
+.sheet-title{margin:0;font-size:.85rem;font-weight:800}
+
+/* range inputs */
+input[type="range"]{-webkit-appearance:none;appearance:none;width:100%;height:34px;margin:0;background:transparent;cursor:pointer}
+input[type="range"]::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:var(--line)}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;margin-top:-11px;border-radius:50%;background:var(--accent);border:3px solid var(--panel);box-shadow:0 1px 4px rgba(0,0,0,.35)}
+input[type="range"]::-moz-range-track{height:6px;border-radius:3px;background:var(--line)}
+input[type="range"]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:var(--accent);border:3px solid var(--panel)}
+input[type="range"]:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:8px}
+
+/* waveform + mixer */
+.wave-row{display:flex;gap:8px;align-items:flex-start}
+.wave-row canvas{flex:1;min-width:0}
+.mixer{flex:none;width:80px;display:flex;flex-direction:column;padding-top:26px}
+.strip{position:relative;display:flex;align-items:stretch;justify-content:flex-end;gap:6px;padding:4px 0;touch-action:none;cursor:ns-resize}
+.strip .ms{cursor:default}
+.fader .bubble{position:absolute;right:34px;transform:translateY(50%);margin-bottom:0;padding:3px 7px;border-radius:7px;background:var(--ink);color:var(--bg);
+  font-family:var(--font-num);font-size:.78rem;font-weight:700;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .12s;z-index:2}
+.strip.dragging .bubble{opacity:1}
+.strip.dragging .knob{border-color:var(--ink);background:var(--accent)}
+.recdots{flex:none;width:30px;display:flex;flex-direction:column;padding-top:26px}
+.recdot-cell{display:flex;align-items:center;justify-content:center}
+.recdot-cell + .recdot-cell{border-top:1px solid transparent}
+.recdot{appearance:none;-webkit-appearance:none;border:0;background:none;padding:0;width:30px;height:40px;display:grid;place-items:center;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.recdot span{width:14px;height:14px;border-radius:50%;background:var(--rec);box-shadow:0 0 0 0 var(--rec-soft);transition:box-shadow .15s}
+.recdot.armed span{box-shadow:0 0 0 5px var(--rec-soft),0 0 0 7px var(--rec)}
+.recdot.rec-active span{border-radius:3px;animation:blink 1s steps(2) infinite}
+.recdot:focus-visible{outline:3px solid var(--accent);outline-offset:-2px;border-radius:8px}
+body.recording .recdot:not(.rec-active){pointer-events:none;opacity:.35}
+.strip + .strip{border-top:1px solid var(--line)}
+.ms{display:flex;flex-direction:column;justify-content:center;gap:4px}
+.ms .btn{min-height:0;height:28px;width:32px;padding:0;font-size:.78rem;font-weight:800;border-radius:8px}
+.ms .btn.mute[aria-pressed="true"]{background:var(--rec);border-color:var(--rec);color:#fff}
+.ms .btn.solo[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.fader{position:relative;width:30px;flex:none;touch-action:none;cursor:ns-resize;border-radius:8px;-webkit-tap-highlight-color:transparent}
+.fader:focus-visible{outline:3px solid var(--accent);outline-offset:1px}
+.fader .rail,.fader .fill{position:absolute;left:50%;width:6px;margin-left:-3px;border-radius:3px}
+.fader .rail{top:7px;bottom:7px;background:var(--line)}
+.fader .fill{bottom:7px;background:var(--accent)}
+.fader .unity{position:absolute;left:4px;right:4px;height:2px;margin-bottom:-1px;background:var(--muted);opacity:.6}
+.fader .knob{position:absolute;left:50%;width:26px;height:14px;margin-left:-13px;margin-bottom:-7px;border-radius:5px;background:var(--panel);border:2px solid var(--accent);box-shadow:0 1px 3px rgba(0,0,0,.35)}
+.strip.off .fader .fill{background:var(--wave)}
+canvas{display:block;width:100%;height:170px;touch-action:none;cursor:crosshair}
+canvas.shifting{cursor:ew-resize}
+canvas.locked{cursor:default}
+.readout{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+.now{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:1.6rem;font-weight:700;letter-spacing:-.02em}
+.dur{font-size:.85rem;color:var(--muted);margin-left:6px;font-weight:500;letter-spacing:0}
+.marks{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.chip{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:.8rem;padding:4px 9px;border-radius:999px;background:var(--accent-soft);white-space:nowrap}
+.chip b{color:var(--accent-ink)}
+.chip.len{background:transparent;border:1px solid var(--line);color:var(--muted);font-family:var(--font-ui);font-weight:600}
+.lockbtn{min-height:30px;min-width:34px;padding:2px 6px;border-radius:999px}
+.lockbtn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.shift-note{margin:0;font-size:.82rem;font-weight:700;color:var(--accent-ink)}
+
+.transport{display:grid;grid-template-columns:1fr 1fr 1fr 2.2fr 1fr 1fr;gap:6px}
+.tbtn{min-height:64px;padding:0 2px;border-radius:14px;font-family:var(--font-num);font-size:.92rem;font-weight:700;letter-spacing:-.03em}
+.tbtn.start{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.play{min-height:64px;border-radius:16px;background:var(--ink);color:var(--bg);border-color:var(--ink)}
+
+/* tempo / key */
+.fx-body{display:flex;flex-direction:column;gap:10px}
+#fxCard.collapsed .fx-body{display:none}
+#fxCard.collapsed{padding:8px 12px}
+#fxCard.collapsed .collapse-btn svg{transform:rotate(180deg)}
+.fx-sum{flex:1;min-width:0;display:flex;align-items:baseline;gap:10px;background:none;border:0;padding:4px 0;font:inherit;color:var(--ink);cursor:pointer;text-align:left;-webkit-tap-highlight-color:transparent}
+.fx-sum-l{font-size:.78rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.fx-sum-v{font-size:.9rem;font-weight:800;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fx-sum-v.changed{color:var(--accent-ink)}
+@media (max-width:460px){#fxCard.fx-changed .fx-lbl{display:none}#fxCard.fx-changed .fx-part{margin-left:0}}
+.fx-part{display:inline-grid;place-items:center;min-width:1.55em;height:1.55em;margin-left:.45em;padding:0 .3em;border-radius:6px;background:var(--accent);color:var(--on-accent);font-size:.82rem;letter-spacing:0;vertical-align:1px}
+.fx-sum:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:6px}
+.fx-item{display:flex;flex-direction:column;gap:2px}
+.fx-item + .fx-item{border-top:1px solid var(--line);padding-top:10px}
+.fx-head{display:flex;align-items:center;gap:10px}
+.fx-head label{font-weight:800;font-size:.95rem}
+.fx-head output{flex:1;min-width:0;font-variant-numeric:tabular-nums;font-weight:800;font-size:.95rem;color:var(--accent-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fx-btns{display:flex;gap:6px}
+.fx-btns .btn{min-height:36px;min-width:40px}
+.scale{display:flex;justify-content:space-between;font-family:var(--font-num);font-size:.72rem;color:var(--muted);padding:0 4px}
+.busy{display:flex;align-items:center;gap:10px;font-size:.82rem;color:var(--muted);font-weight:700}
+.busy .bar{flex:1;height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.busy .bar span{display:block;height:100%;width:0;background:var(--accent)}
+
+.row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.row .btn{font-size:.84rem;padding:8px 4px}
+.tune{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.tune-label{font-size:.8rem;font-weight:700;color:var(--muted)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:12px;overflow:hidden;flex:none}
+.seg .btn{border:0;border-radius:0;min-width:48px}
+.seg .btn[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+.nudges{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;flex:1 1 210px}
+.nudges .btn{font-family:var(--font-num);font-size:.8rem;padding:8px 2px;font-weight:700}
+
+.msg{min-height:1.3em;margin:-8px 0;font-size:.9rem;color:var(--muted)}
+.msg.err{color:var(--danger)}
+
+/* folded sections */
+details.fold{border-top:1px solid var(--line);padding-top:4px}
+details.fold summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;min-height:44px;
+  font-size:.8rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--ink);-webkit-tap-highlight-color:transparent}
+details.fold summary::-webkit-details-marker{display:none}
+details.fold summary::after{content:"";width:8px;height:8px;margin-right:6px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);transition:transform .15s}
+details.fold[open] summary::after{transform:rotate(-135deg)}
+details.fold summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:6px}
+.fold-body{display:flex;flex-direction:column;gap:12px;padding:4px 0 10px;font-size:.88rem;color:var(--muted)}
+.set-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.set-row > span{flex:1 1 160px;font-weight:700;color:var(--ink);font-size:.88rem}
+.set-row small{display:block;font-weight:500;color:var(--muted);font-size:.78rem}
+.help ol{margin:0;padding-left:1.2em;display:grid;gap:6px;max-width:65ch}
+.help strong{color:var(--ink);font-weight:700}
+
+.update{position:sticky;bottom:calc(10px + env(safe-area-inset-bottom));align-self:center;display:flex;align-items:center;gap:10px;
+  background:var(--ink);color:var(--bg);border-radius:14px;padding:8px 8px 8px 14px;font-weight:700;font-size:.9rem;box-shadow:0 4px 16px rgba(0,0,0,.25)}
+
+/* while recording only the Stop button stays active */
+body.recording .lockable{pointer-events:none;opacity:.45}
+body.recording #tracks .btn:not(.rec-active),
+body.recording #tracks input,
+body.recording #tracks .trk-name{pointer-events:none;opacity:.45}
+
+@media (max-width:380px){
+  .row .btn{font-size:.78rem}
+  .now{font-size:1.4rem}
+  .btn.sm{font-size:.8rem}
+  .shift-line .lbl{display:none}
+}
+@media (prefers-reduced-motion: reduce){ .btn:active{transform:none} .btn.recb.rec-active .dot{animation:none} }
+</style>
+</head>
+<body>
+<main class="app">
+  <div class="sessbar lockable">
+    <button id="sessBtn" class="sess-btn" type="button" aria-expanded="false" aria-controls="sessPanel">
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+      <span id="sessName">Sesja</span>
+      <svg class="chev" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <span id="net" class="net" hidden>Offline</span>
+  </div>
+
+  <section id="sessPanel" class="card lockable" aria-label="Sesje" hidden>
+    <div class="grid3">
+      <button id="sessNew" class="btn sm" type="button">Nowa sesja</button>
+      <button id="sessRename" class="btn sm" type="button">Zmień nazwę</button>
+      <button id="sessCopy" class="btn sm" type="button">Zrób kopię</button>
+    </div>
+    <div id="renameRow" class="rename" hidden>
+      <input id="renameIn" type="text" maxlength="60" autocomplete="off" aria-label="Nazwa sesji">
+      <button id="renameOk" class="btn sm accent" type="button">Zapisz</button>
+    </div>
+    <div id="sessList" class="sess-list"></div>
+    <div class="grid2">
+      <button id="sessExport" class="btn sm" type="button">Wyślij sesję jako plik</button>
+      <button id="sessImport" class="btn sm" type="button">Otwórz plik sesji</button>
+    </div>
+    <p class="note">Sesje zapisują się same, na tym urządzeniu. Plik sesji możesz przesłać AirDropem na drugie urządzenie i tam go otworzyć.</p>
+    <input id="sessFileIn" type="file" hidden>
+  </section>
+
+  <section id="partsCard" class="card lockable" aria-label="Części i sekwencja">
+    <div class="parts-top">
+      <div class="seg part-seg" role="group" aria-label="Część">
+        <button class="btn" type="button" data-part="A" aria-pressed="true">A</button>
+        <button class="btn" type="button" data-part="B" aria-pressed="false">B</button>
+        <button class="btn" type="button" data-part="C" aria-pressed="false">C</button>
+      </div>
+      <button id="partCopy" class="btn xs" type="button" aria-label="Kopiuj tę część do innej" title="Kopiuj część"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" fill="none" stroke="currentColor" stroke-width="2"/></svg></button>
+      <span class="spacer"></span>
+      <div class="seg mode-seg" role="group" aria-label="Co odtwarzać">
+        <button class="btn" type="button" data-mode="part" aria-pressed="true">Część</button>
+        <button class="btn" type="button" data-mode="seq" aria-pressed="false">Sekwencja</button>
+      </div>
+      <button id="seqCollapse" class="btn collapse-btn" type="button" aria-label="Zwiń sekwencję"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 15l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+    <div id="copyRow" class="copy-row" hidden>
+      <span id="copyLabel">Kopiuj część A do:</span>
+      <div id="copyTargets" class="copy-targets"></div>
+      <button id="copyCancel" class="btn sm" type="button">Anuluj</button>
+    </div>
+    <div class="seq-body">
+      <div id="seqStrip" class="seq-strip" aria-label="Sekwencja"></div>
+      <div id="picker" class="picker" hidden>
+        <div class="wheel-cap"><span>Część</span><span>Ile razy</span></div>
+        <div class="wheels">
+          <div class="wheel-band"></div>
+          <div id="wheelPart" class="wheel" aria-label="Część"></div>
+          <div id="wheelCount" class="wheel" aria-label="Ile razy"></div>
+        </div>
+        <div class="grid4">
+          <button id="pkLeft" class="btn sm" type="button" aria-label="Przesuń klocek w lewo">◀</button>
+          <button id="pkRight" class="btn sm" type="button" aria-label="Przesuń klocek w prawo">▶</button>
+          <button id="pkDel" class="btn sm warn" type="button">Usuń</button>
+          <button id="pkDone" class="btn sm accent" type="button">Gotowe</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div id="partView" class="part-view">
+  <section id="tracks" class="card" aria-label="Ślady">
+    <div class="trk-top">
+      <button id="trkToggle" class="trk-toggle" type="button" aria-expanded="true" aria-controls="trackList"><span id="trkCount">Ślady</span></button>
+      <div class="trk-mini">
+        <button id="addTrackMini" class="btn sm" type="button" aria-label="Dodaj ślad">+ Ślad</button>
+        <button id="bounceMini" class="btn sm accent" type="button">MP3</button>
+      </div>
+      <button id="trkCollapse" class="btn collapse-btn" type="button" aria-label="Zwiń ślady"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 15l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+    <div id="trackList" class="trk-list"></div>
+    <div class="trk-foot">
+      <button id="addTrack" class="btn sm" type="button">+ Dodaj ślad</button>
+      <button id="bounce" class="btn sm accent" type="button">Eksportuj MP3</button>
+    </div>
+    <div id="bounceSheet" class="sheet" hidden>
+      <p class="sheet-title" id="bounceTitle">Co zgrać do MP3?</p>
+      <div class="grid3" id="bounceChoice">
+        <button id="bounceAll" class="btn sm" type="button">Ta część</button>
+        <button id="bounceLoop" class="btn sm" type="button">Tylko pętla</button>
+        <button id="bounceSeq" class="btn sm" type="button">Cała sekwencja</button>
+      </div>
+      <div id="bounceProg" class="busy" hidden><div class="bar"><span id="bounceBar"></span></div><span id="bounceTxt">0%</span></div>
+      <div class="grid2" id="bounceDone" hidden>
+        <button id="bounceShare" class="btn sm accent" type="button">Udostępnij plik</button>
+        <button id="bounceClose" class="btn sm" type="button">Zamknij</button>
+      </div>
+      <p class="note" id="bounceNote">Zgrywa wszystkie ślady tak, jak je słyszysz: z głośnościami, tempem i tonacją.</p>
+      <button id="bounceCancel" class="btn sm" type="button">Anuluj</button>
+    </div>
+    <input id="fileIn" type="file" accept="audio/*,video/*,.m4a,.mp3,.wav,.aac,.aif,.aiff,.caf,.qta,.mov,.mp4,.m4v" hidden>
+  </section>
+
+  <p id="msg" class="msg" role="status" aria-live="polite"></p>
+
+  <section id="card" class="card" aria-label="Przebieg">
+    <div class="wave-row">
+      <div id="recdots" class="recdots" aria-label="Nagrywanie do śladów" hidden></div>
+      <canvas id="wave" aria-label="Przebieg nagrań. Przeciągnij palcem, aby zaznaczyć pętlę. Stuknij, aby przewinąć. Przeciągnij znacznik A lub B, aby go przesunąć."></canvas>
+      <div id="mixer" class="mixer" aria-label="Mikser"></div>
+    </div>
+    <p id="shiftNote" class="shift-note" hidden></p>
+    <div class="readout lockable">
+      <div class="now"><span id="now">0:00,00</span><span id="dur" class="dur">/ 0:00,00</span></div>
+      <div class="marks">
+        <span class="chip"><b>A</b> <span id="tA">–:––,––</span></span>
+        <span class="chip"><b>B</b> <span id="tB">–:––,––</span></span>
+        <span class="chip len" id="tLen">brak pętli</span>
+        <button id="lock" class="btn lockbtn" type="button" aria-pressed="false" aria-label="Zablokuj pętlę"></button>
+      </div>
+    </div>
+  </section>
+  </div>
+
+  <section class="transport lockable" aria-label="Odtwarzanie">
+    <button id="toStart" class="btn tbtn start" type="button" aria-label="Od początku (od A, gdy jest pętla)"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M5.5 5h2.6v14H5.5zM19 5.2v13.6L9.2 12z" fill="currentColor"/></svg></button>
+    <button class="btn tbtn" type="button" data-skip="-10" aria-label="10 sekund do tyłu">−10</button>
+    <button class="btn tbtn" type="button" data-skip="-5" aria-label="5 sekund do tyłu">−5</button>
+    <button id="play" class="btn play" type="button" aria-label="Odtwarzaj"></button>
+    <button class="btn tbtn" type="button" data-skip="5" aria-label="5 sekund do przodu">+5</button>
+    <button class="btn tbtn" type="button" data-skip="10" aria-label="10 sekund do przodu">+10</button>
+  </section>
+
+  <section class="row lockable" aria-label="Pętla" style="grid-template-columns:1fr 1fr">
+    <button id="loop" class="btn" type="button" aria-pressed="true">Pętla: wł.</button>
+    <button id="clearLoop" class="btn" type="button">Usuń pętlę</button>
+  </section>
+
+  <section class="tune lockable" aria-label="Dostrajanie punktów">
+    <span class="tune-label" id="tuneLabel">Dostrój</span>
+    <div class="seg" role="group" aria-labelledby="tuneLabel">
+      <button id="tuneA" class="btn" type="button" aria-pressed="true">A</button>
+      <button id="tuneB" class="btn" type="button" aria-pressed="false">B</button>
+    </div>
+    <div class="nudges">
+      <button class="btn" type="button" data-d="-0.1">−0,1 s</button>
+      <button class="btn" type="button" data-d="-0.01">−0,01</button>
+      <button class="btn" type="button" data-d="0.01">+0,01</button>
+      <button class="btn" type="button" data-d="0.1">+0,1 s</button>
+    </div>
+  </section>
+
+  <section id="fxCard" class="card lockable" aria-label="Tempo i transpozycja">
+    <div class="trk-top">
+      <button id="fxToggle" class="fx-sum" type="button" aria-expanded="true" aria-controls="fxBody"><span class="fx-sum-l"><span class="fx-lbl">Tempo i tonacja</span><b id="fxPart" class="fx-part" title="Ustawienia tej części">A</b></span><span id="fxSummary" class="fx-sum-v">bez zmian</span></button>
+      <button id="fxCollapse" class="btn collapse-btn" type="button" aria-label="Zwiń tempo i transpozycję"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 15l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+    <div id="fxBody" class="fx-body">
+    <div class="fx-item">
+      <div class="fx-head">
+        <label for="tempo">Tempo</label>
+        <output id="tempoV" for="tempo">bez zmian</output>
+        <div class="fx-btns">
+          <button id="tempoMinus" class="btn xs" type="button" aria-label="Wolniej o 1%">−</button>
+          <button id="tempoPlus" class="btn xs" type="button" aria-label="Szybciej o 1%">+</button>
+          <button id="tempoZero" class="btn xs" type="button" aria-label="Tempo oryginalne">0</button>
+        </div>
+      </div>
+      <input id="tempo" type="range" min="-50" max="50" step="1" value="0">
+      <div class="scale"><span>−50%</span><span>0</span><span>+50%</span></div>
+    </div>
+    <div class="fx-item">
+      <div class="fx-head">
+        <label for="semi">Transpozycja</label>
+        <output id="semiV" for="semi">bez zmian</output>
+        <div class="fx-btns">
+          <button id="semiMinus" class="btn xs" type="button" aria-label="Niżej o półton">−</button>
+          <button id="semiPlus" class="btn xs" type="button" aria-label="Wyżej o półton">+</button>
+          <button id="semiZero" class="btn xs" type="button" aria-label="Tonacja oryginalna">0</button>
+        </div>
+      </div>
+      <input id="semi" type="range" min="-7" max="7" step="1" value="0">
+      <div class="scale"><span>−7</span><span>0</span><span>+7</span></div>
+    </div>
+    </div>
+    <div id="busy" class="busy" role="status" hidden>
+      <div class="bar"><span id="busyBar"></span></div><span id="busyTxt">Przeliczam…</span>
+    </div>
+  </section>
+
+  <details class="fold lockable" id="settings">
+    <summary>Ustawienia</summary>
+    <div class="fold-body">
+      <div class="set-row">
+        <span>Zapamiętana poprawka nagrań<small>Uczy się, gdy przesuwasz strzałkami świeże nagranie.</small></span>
+        <output id="learnV" style="font-family:var(--font-num);color:var(--ink)">0 ms</output>
+        <button id="learnReset" class="btn sm" type="button">Wyzeruj</button>
+      </div>
+      <div class="set-row">
+        <span>Wyrównaj poziomy<small>Ustawia podobną głośność wszystkich śladów i zeruje suwaki miksera.</small></span>
+        <button id="levelAll" class="btn sm" type="button">Wyrównaj</button>
+      </div>
+      <div class="set-row">
+        <span>Rozbieg przed nagraniem<small>Ile podkładu zagra przed punktem startu.</small></span>
+        <div class="seg" role="group" aria-label="Rozbieg przed nagraniem">
+          <button class="btn" type="button" data-pre="0">0 s</button>
+          <button class="btn" type="button" data-pre="1">1 s</button>
+          <button class="btn" type="button" data-pre="2">2 s</button>
+          <button class="btn" type="button" data-pre="4">4 s</button>
+        </div>
+      </div>
+      <div class="set-row">
+        <span>Kopia zapasowa<small>Wszystkie sesje w jednym pliku: przed usunięciem aplikacji albo do przeniesienia na nowe urządzenie.</small></span>
+        <button id="backupBtn" class="btn sm" type="button">Zapisz kopię</button>
+        <button id="restoreBtn" class="btn sm" type="button">Przywróć</button>
+        <input id="restoreIn" type="file" hidden>
+      </div>
+      <div class="set-row">
+        <span>Wyczyść sesję<small>Usuwa wszystkie ślady ze wszystkich części bieżącej sesji.</small></span>
+        <button id="wipe" class="btn sm warn" type="button">Wyczyść</button>
+      </div>
+    </div>
+  </details>
+
+  <details class="fold help">
+    <summary>Jak to działa</summary>
+    <div class="fold-body">
+      <ol>
+        <li><strong>Wczytaj</strong> bierze nagranie z Plików albo film z galerii, np. nagranie ekranu ze Spotify. Z filmu zostaje sam dźwięk. Niektóre aplikacje (np. Apple Music) wyciszają nagrywanie ekranu. Z Dyktafonu: stuknij nagranie, potem <strong>•••</strong> → Udostępnij → <strong>Zachowaj w Plikach</strong>.</li>
+        <li><strong>Nagraj</strong> nagrywa do wybranego śladu, a pozostałe grają jako podkład. Załóż słuchawki, najlepiej przewodowe. Przy ustawionej pętli nagrywanie rusza przed A i kończy się samo po B. <strong>Wyczyść</strong> opróżnia ślad, a <strong>Usuń</strong> kasuje cały ślad.</li>
+        <li><strong>Mikser</strong> obok przebiegu: pionowy suwak ustawia głośność śladu w decybelach (przesuwaj palcem w górę i w dół, kreska to 0 dB, dwuklik wraca do 0 dB). <strong>M</strong> wycisza ślad, a <strong>S</strong> zostawia słyszalne tylko ślady z włączonym solo. Każde nowe nagranie i wczytany plik dostaje automatycznie wyrównany poziom, więc suwakami tylko doprawiasz. Eksport MP3 brzmi tak samo jak w słuchawkach.</li>
+        <li><strong>Odtwarzanie:</strong> żółty przycisk startuje od A, gdy jest pętla, a bez pętli od początku. <strong>−10 / −5 / +5 / +10</strong> przeskakują o sekundy. Przy włączonej pętli przeskoki zostają w pętli.</li>
+        <li>Ślady 2–4 przesuwasz strzałkami względem śladu 1: <strong>‹ ›</strong> o 10 ms, <strong>‹‹ ››</strong> o 100 ms. Gdy poprawiasz świeże nagranie, aplikacja zapamiętuje poprawkę i stosuje ją do kolejnych nagrań.</li>
+        <li><strong>Pętla:</strong> przeciągnij palcem po przebiegu, a potem dostrój A i B przyciskami ±. Znaczniki A i B możesz też przeciągać. <strong>Kłódka</strong> blokuje pętlę i przebieg przed przypadkowym dotknięciem (przewijanie działa dalej).</li>
+        <li><strong>Tempo i transpozycja</strong> działają na wszystkie ślady otwartej części. Każda część (A, B, C) ma własne tempo i tonację, a sekwencja gra każdą część w jej ustawieniach. Tempo zmienia się bez zmiany wysokości dźwięku, a transpozycja bez zmiany tempa.</li>
+        <li><strong>Części A, B, C:</strong> każda ma własne ślady, nagrania, pętlę, mikser, tempo i tonację. Kopiowanie części przenosi też jej tempo i tonację. Kropka przy literze oznacza, że część ma nagrania.</li>
+        <li><strong>Kopiowanie części:</strong> przycisk z dwoma kwadracikami obok liter kopiuje całą bieżącą część (ślady, pętlę, mikser) do innej. Potem podmieniasz w kopii tylko tę partię, którą chcesz zmienić.</li>
+        <li><strong>Sekwencja:</strong> klocki typu A×4, B×2. Stuknij klocek, żeby kółkiem wybrać część i liczbę powtórzeń (1–32), albo <strong>+</strong>, żeby dodać nowy. Przełącz na <strong>Sekwencja</strong> i stuknij ▶: każda część gra swoją pętlę (albo całość, gdy pętli nie ma) tyle razy, ile ustawisz, a po ostatnim klocku wszystko wraca na początek.</li>
+        <li><strong>Sesje:</strong> stuknij nazwę sesji na górze, żeby otworzyć listę, założyć nową, zrobić kopię albo wysłać sesję jako plik na drugie urządzenie. Wszystko zapisuje się samo.</li>
+        <li><strong>Eksportuj MP3</strong> zgrywa wszystko tak, jak słyszysz. W menu udostępniania wybierz Messengera albo Zachowaj w Plikach.</li>
+        <li><strong>Kopia zapasowa</strong> (w Ustawieniach) zapisuje wszystkie sesje w jednym pliku. Zrób ją przed usunięciem aplikacji z ekranu. Przywrócisz ją przyciskiem Przywróć albo przez Otwórz plik sesji.</li>
+        <li>Aplikacja działa bez internetu. Brak dźwięku? Sprawdź, czy telefon nie jest w trybie cichym.</li>
+      </ol>
+    </div>
+  </details>
+
+  <div id="update" class="update" role="status" hidden>
+    <span>Jest nowa wersja</span>
+    <button id="reload" class="btn sm accent" type="button">Odśwież</button>
+  </div>
+</main>
+
+<script>
+(() => {
+'use strict';
+/*DSP*/
+/*MP4*/
+
+const $ = (id) => document.getElementById(id);
+const canvas = $('wave');
+const g = canvas.getContext('2d');
+const MIN_LOOP = 0.05;
+const MAX_TRACKS = Infinity;
+const LEARN_LIMIT = 0.3;
+const ICON_PLAY = '<svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><path d="M7 4.5v15l13-7.5z" fill="currentColor"/></svg>';
+const ICON_PAUSE = '<svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><path d="M6 4h4.5v16H6zM13.5 4H18v16h-4.5z" fill="currentColor"/></svg>';
+const ICON_LOCK = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2" fill="currentColor"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2.2"/></svg>';
+const ICON_UNLOCK = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 11V8a4 4 0 0 1 7.6-1.8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
+const CHEVRON = '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+let ctx = null;
+let slots = [];                       // { id, name, raw: Float32Array|null, dur, vol, offset, max, src, open }
+let nextId = 1;
+let tempoPct = 0, semi = 0;
+let R = null;                         // render { T, D, sr, bufs: {id: AudioBuffer}, dur, len }
+let renderDirty = false;
+let playR = null;
+let srcs = [], gains = {}, token = 0;
+let playing = false, t0 = 0, off0 = 0, curLoop = null, paused = 0;
+let A = null, B = null, loopOn = true, tune = 'A', zoomed = false, shiftId = null, locked = false;
+let view = { s: 0, e: 1 };
+let lanes = [], drag = null, raf = 0, msgTimer = 0, lockMsgAt = 0;
+let renderGen = 0, renderTimer = 0;
+let rec = null, recStarting = false, workletLoaded = false;
+let armed = null;                     // { act, id, t } for two-tap confirmations
+let pendingLoadId = null;
+let learnMs = 0, preroll = 2;
+let lastRec = null;                   // { id, T, orig, base } — the fresh recording that teaches the correction
+let restoring = true, saveTimer = 0;
+let sessions = { current: null, nextSid: 1, list: [] };
+let curSid = null;
+let bounceBlob = null, bounceName = '', bounceWorker = null;
+let wakeLock = null;
+
+try {
+  const l = localStorage.getItem('looper.learnMs');
+  if (l != null) learnMs = parseFloat(l) || 0;
+  else { const old = parseInt(localStorage.getItem('petla-ab.latencyMs') || '0', 10) || 0; learnMs = -old; }
+} catch (e) {}
+try { const p = parseFloat(localStorage.getItem('looper.preroll')); if ([0, 1, 2, 4].includes(p)) preroll = p; } catch (e) {}
+
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+const hasContent = (s) => !!(s && s.raw);
+const content = () => slots.filter(hasContent);
+const slotById = (id) => slots.find((s) => s.id === id) || null;
+const newSlot = () => ({ id: nextId++, name: '', raw: null, dur: 0, vol: 1, trim: 1, offset: 0, max: 0, src: null, open: false, mute: false, solo: false });
+const refOffset = () => hasContent(slots[0]) ? slots[0].offset : 0;
+const anySoloIn = (list) => list.some((s) => hasContent(s) && s.solo);
+const audibleIn = (list, s) => !s.mute && (!anySoloIn(list) || s.solo);
+const effGainIn = (list, s) => (rec && rec.id === s.id) ? 0 : (audibleIn(list, s) ? s.vol * (s.trim || 1) : 0);
+const anySolo = () => anySoloIn(slots);
+const audible = (s) => audibleIn(slots, s);
+const effGain = (s) => effGainIn(slots, s);
+
+/* fader in dB: bottom = silence, 3/4 of the way up = 0 dB, top = +12 dB */
+const DB_MAX = 12, DB_MIN = -48, UNITY = 0.75;
+const volToDb = (v) => v <= 0.00001 ? -Infinity : 20 * Math.log10(v);
+function posToVol(p){
+  if (p <= 0.01) return 0;
+  let db = p >= UNITY ? (p - UNITY) / (1 - UNITY) * DB_MAX : (p / UNITY - 1) * -DB_MIN;
+  if (Math.abs(db) < 0.6) db = 0;
+  return Math.pow(10, db / 20);
+}
+function volToPos(v){
+  const db = volToDb(v);
+  if (db === -Infinity) return 0;
+  return db >= 0 ? Math.min(1, UNITY + db / DB_MAX * (1 - UNITY)) : Math.max(0, UNITY * (1 + db / -DB_MIN));
+}
+function dbLabel(v){
+  const db = volToDb(v);
+  if (db === -Infinity || db < DB_MIN + 0.5) return '−∞ dB';
+  const r = Math.round(db);
+  return (r > 0 ? '+' : r < 0 ? '−' : '') + Math.abs(r) + ' dB';
+}
+
+/* loudness levelling: gated mean-square level brought to TARGET_DB (peaks kept under +6 dB) */
+const TARGET_DB = -18;
+function autoTrim(x){
+  const sr = SR(), blk = Math.max(256, Math.round(sr * 0.05));
+  const ms = [];
+  for (let i = 0; i + blk <= x.length; i += blk){ let e = 0; for (let j = i; j < i + blk; j++) e += x[j] * x[j]; ms.push(e / blk); }
+  let sel = ms.filter((v) => v > 1e-8);
+  if (!sel.length) return 1;
+  let mean = sel.reduce((a, b) => a + b, 0) / sel.length;
+  sel = sel.filter((v) => v > mean * 0.01);
+  mean = sel.reduce((a, b) => a + b, 0) / sel.length;
+  const level = 10 * Math.log10(mean);
+  let t = Math.pow(10, clamp(TARGET_DB - level, -24, 30) / 20);
+  let pk = 0; for (let i = 0; i < x.length; i++){ const v = x[i] < 0 ? -x[i] : x[i]; if (v > pk) pk = v; }
+  if (pk > 0 && pk * t > 2) t = 2 / pk;
+  return t;
+}
+
+/* output limiter, shared by playback and MP3 export */
+function setupLimiter(node){
+  node.threshold.value = -2; node.knee.value = 2; node.ratio.value = 20; node.attack.value = 0.002; node.release.value = 0.12;
+  return node;
+}
+let master = null;
+function getMaster(){
+  const c = getCtx();
+  if (!master){ master = setupLimiter(c.createDynamicsCompressor()); master.connect(c.destination); }
+  return master;
+}
+
+function fmt(t){
+  if (t == null || !isFinite(t)) return '–:––,––';
+  const cs = Math.round(Math.max(0, t) * 100);
+  const m = Math.floor(cs / 6000);
+  const s = Math.floor((cs % 6000) / 100);
+  const c = cs % 100;
+  return m + ':' + String(s).padStart(2, '0') + ',' + String(c).padStart(2, '0');
+}
+const secs = (t) => t.toFixed(2).replace('.', ',') + ' s';
+const signed = (v, d) => (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(d).replace('.', ',');
+function semiLabel(n){
+  if (n === 0) return 'bez zmian';
+  const a = Math.abs(n);
+  const word = a === 1 ? 'półton' : (a >= 2 && a <= 4) ? 'półtony' : 'półtonów';
+  return (n > 0 ? '+' : '−') + a + ' ' + word;
+}
+const hhmm = () => { const d = new Date(); return String(d.getHours()).padStart(2, '0') + '.' + String(d.getMinutes()).padStart(2, '0'); };
+const defaultSessName = () => { const d = new Date(); return 'Sesja ' + d.getDate() + '.' + (d.getMonth() + 1) + ' ' + hhmm(); };
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const tracksWord = (n) => n === 1 ? '1 ślad' : (n >= 2 && n <= 4) ? n + ' ślady' : n + ' śladów';
+
+function say(text, err, sticky){
+  const el = $('msg');
+  el.textContent = text || '';
+  el.classList.toggle('err', !!err);
+  clearTimeout(msgTimer);
+  if (text && !sticky) msgTimer = setTimeout(() => { el.textContent = ''; el.classList.remove('err'); }, err ? 9000 : 6000);
+}
+function isArmed(act, id){ return armed && armed.act === act && armed.id === id && Date.now() - armed.t < 4000; }
+function arm(act, id){ armed = { act, id, t: Date.now() }; ui(); renderSessions(); setTimeout(() => { if (armed && Date.now() - armed.t >= 4000){ armed = null; ui(); renderSessions(); } }, 4100); }
+
+/* ---------- audio context ---------- */
+function setSession(type){ try { if (navigator.audioSession) navigator.audioSession.type = type; } catch (e) {} }
+function getCtx(){
+  if (!ctx){
+    setSession('playback');
+    const AC = window.AudioContext || window.webkitAudioContext;
+    ctx = new AC();
+  }
+  return ctx;
+}
+/* iPadOS/iOS can leave the audio engine frozen after the app was minimised.
+   On the first touch after coming back we wake it, or swap in a fresh one. */
+let ctxStale = false, hiddenAt = 0;
+function freshCtx(){
+  const old = ctx;
+  srcs = []; gains = {};
+  ctx = null; master = null; workletLoaded = false;
+  try { if (old && old.state !== 'closed') old.close(); } catch (e) {}
+  return getCtx();
+}
+function wakeAudio(){
+  if (!ctx){ getCtx(); }
+  const busy = playing || seqPlaying || rec || recStarting;
+  if (!busy && (ctxStale || ctx.state === 'interrupted' || ctx.state === 'closed')){ ctxStale = false; freshCtx(); }
+  if (!rec && !recStarting) setSession('playback');
+  if (ctx.state !== 'running'){ try { const r = ctx.resume(); if (r && r.catch) r.catch(() => {}); } catch (e) {} }
+}
+['touchend', 'click', 'keydown'].forEach((ev) => document.addEventListener(ev, wakeAudio, true));
+// After ▶: if the clock does not move, the engine is stuck — replace it and try again.
+function watchClock(onStuck){
+  const c = ctx, t = c ? c.currentTime : 0;
+  setTimeout(() => { if (ctx === c && c && c.currentTime - t < 0.05) onStuck(); }, 800);
+}
+const SR = () => getCtx().sampleRate;
+
+function timelineDur(){
+  let d = 0;
+  for (const s of content()) d = Math.max(d, s.offset + s.dur);
+  return Math.max(d, 0.1);
+}
+
+async function keepAwake(on){
+  try {
+    if (on && !wakeLock && navigator.wakeLock){ wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null; }); }
+    else if (!on && wakeLock){ const w = wakeLock; wakeLock = null; await w.release(); }
+  } catch (e) { wakeLock = null; }
+}
+
+/* ---------- storage ---------- */
+const DB = {
+  db: null,
+  open(){
+    return new Promise((res, rej) => {
+      if (!window.indexedDB) return rej(new Error('no indexedDB'));
+      const r = indexedDB.open('petla-ab', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('kv');
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => rej(r.error);
+    });
+  },
+  async handle(){ if (!this.db) this.db = await this.open(); return this.db; },
+  async get(k){
+    const db = await this.handle();
+    return new Promise((res, rej) => { const q = db.transaction('kv').objectStore('kv').get(k); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); });
+  },
+  async put(k, v){
+    const db = await this.handle();
+    return new Promise((res, rej) => { const tx = db.transaction('kv', 'readwrite'); tx.objectStore('kv').put(v, k); tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error); });
+  },
+  async del(k){
+    const db = await this.handle();
+    return new Promise((res, rej) => { const tx = db.transaction('kv', 'readwrite'); tx.objectStore('kv').delete(k); tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error); });
+  }
+};
+const stKey = (sid) => 's' + sid + '-state';
+const dKey = (sid, id) => 's' + sid + '-data-' + id;
+const sessMeta = (sid) => sessions.list.find((x) => x.sid === sid);
+const saveIndex = () => DB.put('sessions', sessions).catch(() => {});
+
+function toInt16(x){
+  const out = new Int16Array(x.length);
+  for (let i = 0; i < x.length; i++){ const s = x[i] < -1 ? -1 : x[i] > 1 ? 1 : x[i]; out[i] = s < 0 ? s * 32768 : s * 32767; }
+  return out;
+}
+function fromInt16(buf){
+  const a = new Int16Array(buf), out = new Float32Array(a.length);
+  for (let i = 0; i < a.length; i++) out[i] = a[i] / 32768;
+  return out;
+}
+const slotSrc = (s) => s.src && s.src.kind === 'file' ? s.src : { kind: 'pcm', sr: SR(), name: s.name, data: toInt16(s.raw).buffer };
+
+let storageWarned = false;
+function saveSlotData(s){
+  if (curSid == null) return;
+  const key = dKey(curSid, s.id);
+  const p = hasContent(s) ? DB.put(key, slotSrc(s)) : DB.del(key);
+  p.catch(() => {
+    if (!storageWarned){ storageWarned = true; say('Nie udało się zapamiętać nagrania (brak miejsca?). Wszystko działa, tylko po zamknięciu trzeba je wczytać ponownie.', true); }
+  });
+  scheduleSave(true);
+}
+/* ---------- parts A / B / C (each has its own tracks, loop and render) ---------- */
+const PARTS = ['A', 'B', 'C'];
+const blankPart = () => ({ slots: [newSlot()], R: null, renderDirty: false, A: null, B: null, loopOn: true, locked: false, paused: 0, tune: 'A', lastRec: null, tempoPct: 0, semi: 0 });
+let parts = {};
+let curPart = 'A';
+let playMode = 'part';                 // 'part' | 'seq'
+let sequence = [{ p: 'A', n: 1 }];
+function stashPart(){
+  const p = parts[curPart];
+  if (!p) return;
+  Object.assign(p, { slots, R, renderDirty, A, B, loopOn, locked, paused, tune, lastRec, tempoPct, semi });
+}
+function applyPart(k){
+  const p = parts[k];
+  curPart = k;
+  slots = p.slots; R = p.R; renderDirty = !!p.renderDirty;
+  A = p.A; B = p.B; loopOn = p.loopOn !== false; locked = !!p.locked;
+  paused = p.paused || 0; tune = p.tune || 'A'; lastRec = p.lastRec || null;
+  tempoPct = p.tempoPct || 0; semi = p.semi || 0;
+  shiftId = null; zoomed = false; drag = null; armed = null;
+}
+function initParts(){ parts = {}; for (const k of PARTS) parts[k] = blankPart(); curPart = 'A'; applyPart('A'); }
+const partHas = (k) => parts[k] && parts[k].slots.some(hasContent);
+const curT = () => 1 + tempoPct / 100;
+const curP = () => Math.pow(2, semi / 12);
+const partT = (k) => 1 + ((parts[k] && parts[k].tempoPct) || 0) / 100;
+const partP = (k) => Math.pow(2, ((parts[k] && parts[k].semi) || 0) / 12);
+const fxVal = (v, dflt, lo, hi) => clamp(Math.round(+(v != null ? v : dflt) || 0), lo, hi);
+
+const slotMeta = (s) => ({ id: s.id, name: s.name, vol: s.vol, trim: s.trim || 1, offset: s.offset, has: hasContent(s), mute: !!s.mute, solo: !!s.solo });
+function stateObj(){
+  stashPart();
+  const ps = {};
+  for (const k of PARTS){ const p = parts[k]; ps[k] = { A: p.A, B: p.B, loopOn: p.loopOn !== false, locked: !!p.locked, tempoPct: p.tempoPct || 0, semi: p.semi || 0, slots: p.slots.map(slotMeta) }; }
+  return { v: 4, nextId, tempoPct, semi, curPart, playMode, sequence: sequence.map((x) => ({ p: x.p, n: x.n })), parts: ps };
+}
+const allSlots = () => { stashPart(); const out = []; for (const k of PARTS) for (const s of parts[k].slots) out.push(s); return out; };
+function writeState(){
+  if (curSid == null) return Promise.resolve();
+  const st = stateObj();
+  const m = sessMeta(curSid);
+  if (m){ m.updated = Date.now(); m.tracks = allSlots().filter(hasContent).length; }
+  return Promise.all([DB.put(stKey(curSid), st), saveIndex()]).catch(() => {});
+}
+function scheduleSave(now){
+  if (restoring) return;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(writeState, now ? 0 : 800);
+}
+
+/* ---------- rendering (tempo / key / alignment) ---------- */
+function setBusy(f, label){
+  const b = $('busy');
+  if (f == null){ b.hidden = true; return; }
+  b.hidden = false;
+  $('busyBar').style.width = Math.round(f * 100) + '%';
+  $('busyTxt').textContent = (label || 'Przeliczam…') + ' ' + Math.round(f * 100) + '%';
+}
+const nextTick = () => new Promise((r) => setTimeout(r, 0));
+
+function scheduleRender(delay){
+  renderDirty = true;
+  if (parts[curPart]) parts[curPart].renderDirty = true;
+  clearTimeout(renderTimer);
+  renderTimer = setTimeout(doRender, delay == null ? 60 : delay);
+}
+function markAllDirty(){ stashPart(); for (const k of PARTS) parts[k].renderDirty = true; }
+
+// Render one list of tracks at a part's tempo / key (default: the open part). Returns null when aborted.
+async function renderList(list, alive, label, tp, sm){
+  if (tp == null) tp = tempoPct;
+  if (sm == null) sm = semi;
+  const c = getCtx(), sr = c.sampleRate;
+  const T = 1 + tp / 100, P = Math.pow(2, sm / 12);
+  let D = 0;
+  for (const s of list) D = Math.max(D, s.offset + s.dur);
+  D = Math.max(D, 0.1);
+  const Lout = Math.max(1, Math.round(D * sr / T));
+  const neutral = tp === 0 && sm === 0;
+  if (!neutral){ setBusy(0, label); await nextTick(); if (!alive()) return null; }
+  const bufs = {};
+  for (const s of list) bufs[s.id] = c.createBuffer(1, Lout, sr);
+  if (neutral){
+    for (const s of list) alignCopy(s.raw, Math.round(s.offset * sr), bufs[s.id].getChannelData(0));
+  } else {
+    const Ys = [], Os = [], outs = [];
+    let tk = performance.now();
+    for (const s of list){
+      const o = Math.round(s.offset * sr);
+      if (sm === 0){ Ys.push(s.raw); Os.push(o); }
+      else {
+        const y = new Float32Array(resampleLen(s.raw.length, P));
+        for (const f of resampleGen(s.raw, P, y)){
+          if (performance.now() - tk > 40){ await nextTick(); tk = performance.now(); if (!alive()) return null; }
+        }
+        Ys.push(y); Os.push(Math.round(o / P));
+      }
+      outs.push(bufs[s.id].getChannelData(0));
+    }
+    const Ly = Math.ceil(D * sr / P);
+    for (const f of wsolaGen(Ys, Os, Ly, P / T, sr, outs)){
+      if (performance.now() - tk > 40){ setBusy(f, label); await nextTick(); tk = performance.now(); if (!alive()) return null; }
+    }
+  }
+  return { T, P, D, sr, bufs, dur: Lout / sr, len: Lout };
+}
+
+async function doRender(){
+  if (rec || recStarting){ scheduleRender(500); return; }
+  const gen = ++renderGen;
+  const k = curPart;
+  const list = content();
+  if (!list.length){ R = null; renderDirty = false; stashPart(); setBusy(null); if (playing) pause(); ui(); return; }
+  let r;
+  try { r = await renderList(list, () => gen === renderGen); }
+  catch (err) {
+    if (gen === renderGen){ setBusy(null); say('Brakuje pamięci na takie przeliczenie. Spróbuj krótszych nagrań albo mniejszej liczby śladów.', true); }
+    return;
+  }
+  if (!r || gen !== renderGen) return;
+  setBusy(null);
+  if (curPart !== k){ parts[k].R = r; parts[k].renderDirty = false; return; }
+  const wasPlaying = playing;
+  const tau = pos();
+  R = r; renderDirty = false;
+  stashPart();
+  if (seqPlaying) restartSeqKeepingPlace();
+  if (wasPlaying) startAt(tau);
+  else { paused = clamp(paused, 0, r.D); ui(); }
+}
+
+async function ensureRendered(k){
+  stashPart();
+  const p = parts[k];
+  const list = p.slots.filter(hasContent);
+  if (!list.length){ p.R = null; p.renderDirty = false; return null; }
+  if (p.R && !p.renderDirty && p.R.T === partT(k) && p.R.P === partP(k) && list.every((s) => p.R.bufs[s.id])) return p.R;
+  const r = await renderList(list, () => true, 'Przeliczam część ' + k + '…', p.tempoPct || 0, p.semi || 0);
+  setBusy(null);
+  p.R = r; p.renderDirty = false;
+  if (k === curPart){ R = r; renderDirty = false; }
+  return r;
+}
+
+/* ---------- playback ---------- */
+function loopActive(){ return loopOn && A != null && B != null && B - A >= MIN_LOOP; }
+function playingSlots(){ return slots.filter((s) => hasContent(s) && R && R.bufs[s.id]); }
+
+function snapIn(Rx, list, tb){
+  const sr = Rx.sr, i0 = Math.round(tb * sr), w = Math.round(0.004 * sr);
+  const ch = list.filter((s) => hasContent(s) && Rx.bufs[s.id]).map((s) => ({ d: Rx.bufs[s.id].getChannelData(0), v: effGainIn(list, s) || 0.001 }));
+  if (!ch.length) return tb;
+  const len = ch[0].d.length;
+  const at = (i) => { let s = 0; for (const c of ch) s += c.d[i] * c.v; return s; };
+  let best = i0, bd = Infinity;
+  for (let i = Math.max(1, i0 - w); i <= Math.min(len - 1, i0 + w); i++){
+    if (at(i - 1) <= 0 && at(i) > 0){ const d = Math.abs(i - i0); if (d < bd){ bd = d; best = i; } }
+  }
+  return best / sr;
+}
+const snapOut = (tb) => snapIn(R, slots, tb);
+
+function pos(){
+  if (rec && ctx) return Math.max(0, rec.tauPlay + Math.max(0, ctx.currentTime - rec.when - (ctx.outputLatency || 0)) * rec.T);
+  if (seqPlaying && seq && ctx){
+    const cur = seqCurrent();
+    if (cur && cur.seg.part === curPart) return cur.tau;
+    return paused;
+  }
+  if (!playing || !ctx || !playR) return paused;
+  const lat = ctx.outputLatency || 0;
+  let b = off0 + Math.max(0, ctx.currentTime - t0 - lat);
+  if (curLoop && b >= curLoop.b) b = curLoop.a + (b - curLoop.a) % (curLoop.b - curLoop.a);
+  return Math.min(b * playR.T, playR.D);
+}
+
+function killSources(){
+  if (!srcs.length) return;
+  token++;
+  const n = ctx.currentTime;
+  srcs.forEach((s) => { s.onended = null; });
+  Object.values(gains).forEach((gn) => {
+    try { gn.gain.cancelScheduledValues(n); gn.gain.setValueAtTime(gn.gain.value, n); gn.gain.linearRampToValueAtTime(0, n + 0.006); } catch (e) {}
+  });
+  srcs.forEach((s) => { try { s.stop(n + 0.008); } catch (e) { try { s.stop(); } catch (e2) {} } });
+  srcs = []; gains = {};
+}
+
+function startAt(tau, opts){
+  opts = opts || {};
+  if (!R){ say(content().length ? 'Chwila, przygotowuję nagrania…' : 'Najpierw wczytaj albo nagraj ślad.'); return false; }
+  const c = getCtx();
+  killSources();
+  if (c.state !== 'running'){
+    const r = c.resume();
+    if (r && r.catch) r.catch(() => say('Przeglądarka zablokowała dźwięk. Stuknij Odtwarzaj jeszcze raz.', true));
+  }
+  const T = R.T;
+  let offB = tau / T;
+  curLoop = null;
+  if (!opts.noLoop && loopActive()){
+    const a = snapOut(A / T), b = Math.min(snapOut(B / T), R.dur);
+    if (b - a > 0.02){ curLoop = { a, b }; if (offB >= b) offB = a; }
+  }
+  offB = clamp(offB, 0, Math.max(0, R.dur - 0.001));
+  const when = Math.max(c.currentTime, opts.when || 0);
+  const my = ++token;
+  for (const s of playingSlots()){
+    const src = c.createBufferSource();
+    src.buffer = R.bufs[s.id];
+    const gn = c.createGain();
+    src.connect(gn); gn.connect(getMaster());
+    const v = opts.muteId === s.id ? 0 : effGain(s);
+    gn.gain.setValueAtTime(0, when);
+    gn.gain.linearRampToValueAtTime(v, when + 0.006);
+    if (curLoop){ src.loop = true; src.loopStart = curLoop.a; src.loopEnd = curLoop.b; }
+    src.start(when, offB);
+    srcs.push(src); gains[s.id] = gn;
+  }
+  if (!srcs.length){ ui(); return false; }
+  srcs[0].onended = () => {
+    if (my !== token) return;
+    srcs = []; gains = {};
+    playing = false;
+    if (!rec){ paused = (A != null ? A : 0); keepAwake(false); }
+    ui();
+  };
+  t0 = when; off0 = offB; playing = true; playR = R;
+  keepAwake(true);
+  ui(); kick();
+  if (!opts.noWatch && !opts.retried){
+    const tok = token, tau0 = offB * T;
+    watchClock(() => {
+      if (token !== tok || !playing || rec) return;
+      killSources(); playing = false; paused = tau0;
+      freshCtx();
+      if (ctx.state === 'running') startAt(tau0, Object.assign({}, opts, { retried: true }));
+      else { ui(); say('Dźwięk się zawiesił po powrocie do aplikacji. Stuknij ▶ jeszcze raz.', true); }
+    });
+  }
+  return true;
+}
+
+function pause(){
+  paused = pos();
+  killSources();
+  playing = false;
+  if (!rec) keepAwake(false);
+  ui();
+}
+
+function togglePlay(){
+  if (playMode === 'seq'){ if (seqPlaying) pauseSeq(); else startSeq(seqPausedG); return; }
+  if (playing){ pause(); return; }
+  const D = timelineDur();
+  let p = paused;
+  if (p >= D - 0.01) p = (A != null ? A : 0);
+  if (loopActive() && p >= B) p = A;
+  startAt(p);
+}
+
+/* ---------- sequence playback: [A×4] [B×2] … scheduled ahead, sample-accurate ---------- */
+let seq = null, seqPlaying = false, seqPausedG = 0, seqFollow = null;
+
+function partLoopRange(k, Rx){
+  const p = parts[k];
+  if (p.loopOn !== false && p.A != null && p.B != null && p.B - p.A >= MIN_LOOP){
+    const a = snapIn(Rx, p.slots, p.A / Rx.T), b = Math.min(snapIn(Rx, p.slots, p.B / Rx.T), Rx.dur);
+    if (b - a > 0.02) return { a, b };
+  }
+  return { a: 0, b: Rx.dur };
+}
+function seqPlan(){
+  const plan = [];
+  let total = 0;
+  sequence.forEach((st, idx) => {
+    const p = parts[st.p];
+    const Rx = p && p.R;
+    if (!Rx || !partHas(st.p)) return;
+    const { a, b } = partLoopRange(st.p, Rx);
+    const len = b - a;
+    if (len <= 0.02) return;
+    plan.push({ idx, p: st.p, n: st.n, a, len, gstart: total, T: Rx.T });
+    total += len * st.n;
+  });
+  return { plan, total };
+}
+async function prepareSeq(){
+  stashPart();
+  const used = [...new Set(sequence.map((x) => x.p))];
+  for (const k of used){
+    try { await ensureRendered(k); }
+    catch (e) { setBusy(null); say('Brakuje pamięci, żeby przygotować część ' + k + '.', true); return false; }
+  }
+  setBusy(null);
+  return true;
+}
+function seqGainFor(k, s){
+  const key = k + ':' + s.id;
+  let gn = seq.gains[key];
+  if (!gn){
+    gn = ctx.createGain();
+    gn.gain.value = effGainIn(parts[k].slots, s);
+    gn.connect(getMaster());
+    seq.gains[key] = gn;
+  }
+  return gn;
+}
+function seqSchedule(){
+  if (!seq) return;
+  const c = ctx, horizon = c.currentTime + 0.8;
+  const plan = seq.pl.plan;
+  let guard = 0;
+  while (seq.whenNext < horizon && guard++ < 256){
+    const st = plan[seq.i];
+    const within = seq.w, len = st.len - within, t = seq.whenNext;
+    const part = parts[st.p];
+    const nodes = [];
+    for (const s of part.slots){
+      if (!hasContent(s) || !part.R || !part.R.bufs[s.id]) continue;
+      const src = c.createBufferSource();
+      src.buffer = part.R.bufs[s.id];
+      const env = c.createGain();
+      env.gain.setValueAtTime(0, t);
+      env.gain.linearRampToValueAtTime(1, t + 0.002);
+      env.gain.setValueAtTime(1, t + Math.max(0.002, len - 0.002));
+      env.gain.linearRampToValueAtTime(0, t + len);
+      src.connect(env); env.connect(seqGainFor(st.p, s));
+      src.start(t, st.a + within, len);
+      nodes.push(src, env);
+    }
+    seq.segs.push({ idx: st.idx, r: seq.r, n: st.n, part: st.p, when: t, end: t + len, a: st.a + within, T: st.T, g: st.gstart + seq.r * st.len + within, nodes });
+    seq.whenNext += len;
+    seq.w = 0;
+    seq.r++;
+    if (seq.r >= st.n){ seq.r = 0; seq.i = (seq.i + 1) % plan.length; }
+  }
+  const old = c.currentTime - 2;
+  seq.segs = seq.segs.filter((sg) => {
+    if (sg.end < old){ sg.nodes.forEach((n) => { try { n.disconnect(); } catch (e) {} }); return false; }
+    return true;
+  });
+}
+function seqCurrent(){
+  if (!seq || !ctx) return null;
+  const now = ctx.currentTime - (ctx.outputLatency || 0);
+  for (const sg of seq.segs){ if (now >= sg.when && now < sg.end) return { seg: sg, tau: (sg.a + (now - sg.when)) * sg.T, g: sg.g + (now - sg.when) }; }
+  const first = seq.segs[0];
+  if (first && now < first.when) return { seg: first, tau: first.a * first.T, g: first.g };
+  return null;
+}
+function seqPosG(){ const c = seqCurrent(); return c ? c.g : seqPausedG; }
+function stopSeqNodes(){
+  if (!seq) return;
+  clearInterval(seq.timer);
+  const n = ctx.currentTime;
+  for (const sg of seq.segs) for (const nd of sg.nodes){
+    try {
+      if (nd.stop) nd.stop(n + 0.012);
+      else { nd.gain.cancelScheduledValues(n); nd.gain.setValueAtTime(nd.gain.value, n); nd.gain.linearRampToValueAtTime(0, n + 0.01); }
+    } catch (e) {}
+  }
+  const gs = seq.gains;
+  setTimeout(() => Object.values(gs).forEach((gn) => { try { gn.disconnect(); } catch (e) {} }), 300);
+  seq = null;
+}
+let seqStarting = false;
+async function startSeq(g){
+  if (rec || recStarting || seqStarting) return;
+  seqStarting = true;
+  try {
+    if (playing) pause();
+    const wasSeq = !!seq;
+    stopSeqNodes();
+    if (!wasSeq) seqPlaying = false;
+    const ok = await prepareSeq();
+    if (!ok){ seqPlaying = false; ui(); return; }
+    const pl = seqPlan();
+    if (!pl.plan.length){ seqPlaying = false; ui(); say('Sekwencja jest pusta albo jej części nie mają nagrań.', true); return; }
+    const c = getCtx();
+    if (c.state !== 'running'){ try { await c.resume(); } catch (e) {} }
+    g = ((g % pl.total) + pl.total) % pl.total;
+    let i = 0, r = 0, w = 0;
+    for (let k = 0; k < pl.plan.length; k++){
+      const st = pl.plan[k];
+      if (g < st.gstart + st.len * st.n || k === pl.plan.length - 1){
+        const off = Math.max(0, g - st.gstart);
+        r = Math.min(st.n - 1, Math.floor(off / st.len));
+        w = clamp(off - r * st.len, 0, Math.max(0, st.len - 0.03));
+        i = k; break;
+      }
+    }
+    seq = { pl, i, r, w, whenNext: c.currentTime + 0.08, segs: [], gains: {}, timer: 0 };
+    seqSchedule();
+    seq.timer = setInterval(seqSchedule, 60);
+    seqPlaying = true;
+    seqFollow = null;
+    keepAwake(true);
+    ui(); kick();
+    const myseq = seq, g0 = g;
+    watchClock(() => {
+      if (seq !== myseq || !seqPlaying) return;
+      stopSeqNodes(); seqPlaying = false; seqPausedG = g0;
+      freshCtx();
+      if (ctx.state === 'running') startSeq(g0);
+      else { ui(); say('Dźwięk się zawiesił po powrocie do aplikacji. Stuknij ▶ jeszcze raz.', true); }
+    });
+  } finally { seqStarting = false; }
+}
+function pauseSeq(){
+  seqPausedG = seqPosG();
+  stopSeqNodes();
+  seqPlaying = false;
+  keepAwake(false);
+  ui();
+}
+function restartSeqKeepingPlace(){
+  if (!seqPlaying || !seq) return;
+  const cur = seqCurrent();
+  let g = seqPosG();
+  if (cur){
+    stashPart();
+    const st = seqPlan().plan.find((x) => x.idx === cur.seg.idx);
+    if (st) g = st.gstart + Math.min(cur.seg.r, st.n - 1) * st.len + clamp(cur.tau / st.T - st.a, 0, Math.max(0, st.len - 0.03));
+  }
+  startSeq(g);
+}
+function seqEdited(){ if (seqPlaying) startSeq(seqPosG()); }
+
+/* ---------- loop points ---------- */
+function clampMarks(){
+  const D = timelineDur();
+  if (A != null && A > D - MIN_LOOP) A = Math.max(0, D - MIN_LOOP);
+  if (B != null && B > D) B = D;
+  if (A != null && B != null && B - A < MIN_LOOP) B = null;
+  paused = clamp(paused, 0, D);
+}
+function lockedMsg(){
+  if (Date.now() - lockMsgAt > 2500){ lockMsgAt = Date.now(); say('Pętla jest zablokowana. Odblokuj ją kłódką pod przebiegiem.'); }
+}
+
+function setA(){
+  if (locked){ lockedMsg(); return; }
+  if (!content().length) return;
+  const p = pos();
+  const hadLoop = !!curLoop;
+  A = clamp(p, 0, timelineDur() - MIN_LOOP);
+  if (B != null && B - A < MIN_LOOP) B = null;
+  tune = 'A';
+  if (zoomed){ if (B == null){ zoomed = false; resetView(); } else fitZoom(); }
+  if (playing && (hadLoop || loopActive())) startAt(A);
+  else if (!playing) paused = A;
+  ui();
+}
+
+function setB(){
+  if (locked){ lockedMsg(); return; }
+  if (!content().length) return;
+  const p = pos();
+  if (A == null) A = 0;
+  if (p - A < MIN_LOOP) return;
+  B = Math.min(p, timelineDur());
+  loopOn = true; tune = 'B';
+  if (zoomed) fitZoom();
+  if (playing) startAt(A); else paused = A;
+  ui();
+}
+
+function afterMarkerChange(which){
+  if (zoomed) fitZoom();
+  const p = which === 'B' ? Math.max(A != null ? A : 0, B - 1.5) : A;
+  if (playing){ if (loopActive()) startAt(p); }
+  else if (p != null) paused = p;
+  ui();
+}
+
+function nudge(d){
+  if (locked){ lockedMsg(); return; }
+  const D = timelineDur();
+  if (tune === 'A'){
+    if (A == null){ say('Najpierw zaznacz pętlę, przeciągając palcem po przebiegu.', true); return; }
+    A = clamp(A + d, 0, B != null ? B - MIN_LOOP : D - MIN_LOOP);
+  } else {
+    if (B == null){ say('Najpierw zaznacz pętlę, przeciągając palcem po przebiegu.', true); return; }
+    B = clamp(B + d, (A != null ? A : 0) + MIN_LOOP, D);
+  }
+  say('');
+  afterMarkerChange(tune);
+}
+
+function toggleLoop(){
+  if (locked){ lockedMsg(); return; }
+  if (A == null || B == null) return;
+  loopOn = !loopOn;
+  if (playing) startAt(pos());
+  ui();
+}
+
+function clearLoop(){
+  if (locked){ lockedMsg(); return; }
+  const p = pos();
+  A = null; B = null; tune = 'A';
+  if (zoomed){ zoomed = false; resetView(); }
+  if (playing) startAt(p); else paused = p;
+  ui();
+  say('Pętla usunięta.');
+}
+
+function toStart(){
+  if (playMode === 'seq'){ startSeq(0); return; }
+  if (!content().length){ say('Najpierw wczytaj albo nagraj ślad.'); return; }
+  startAt(A != null && B != null ? A : 0);
+}
+function skip(d){
+  if (playMode === 'seq'){
+    if (seqPlaying) startSeq(seqPosG() + d);
+    else { seqPausedG = Math.max(0, seqPausedG + d); }
+    return;
+  }
+  if (!content().length) return;
+  const D = timelineDur();
+  let p = pos() + d;
+  if (loopActive()){
+    const len = B - A;
+    p = A + (((p - A) % len) + len) % len;
+  } else p = clamp(p, 0, Math.max(0, D - 0.05));
+  if (playing) startAt(p); else { paused = p; ui(); }
+}
+
+function toggleLock(){
+  locked = !locked;
+  if (locked){ shiftId = null; drag = null; }
+  ui();
+  say(locked ? 'Pętla zablokowana. Przebieg nie reaguje na dotyk.' : 'Pętla odblokowana.');
+}
+
+/* ---------- tempo, key, volume, offset ---------- */
+function setTempo(v){ tempoPct = clamp(Math.round(v), -50, 50); $('tempo').value = tempoPct; updateFx(); }
+function setSemi(v){ semi = clamp(Math.round(v), -7, 7); $('semi').value = semi; updateFx(); }
+function syncFx(){ $('tempo').value = tempoPct; $('semi').value = semi; updateFx(true); }
+function updateFx(noSave){
+  $('fxPart').textContent = curPart;
+  $('tempoV').textContent = tempoPct === 0 ? 'bez zmian' : signed(tempoPct, 0) + '%';
+  $('semiV').textContent = semiLabel(semi);
+  const bits = [];
+  if (tempoPct) bits.push('tempo ' + signed(tempoPct, 0) + '%');
+  if (semi) bits.push(semiLabel(semi));
+  const sum = $('fxSummary');
+  sum.textContent = bits.length ? bits.join(' · ') : 'bez zmian';
+  sum.classList.toggle('changed', bits.length > 0);
+  $('fxCard').classList.toggle('fx-changed', bits.length > 0);
+  if (!noSave) scheduleSave();
+}
+let fxCollapsed = true;
+try { const v = localStorage.getItem('looper.fxCollapsed'); if (v != null) fxCollapsed = v === '1'; } catch (e) {}
+function setFxCollapsed(v){
+  fxCollapsed = v;
+  try { localStorage.setItem('looper.fxCollapsed', v ? '1' : '0'); } catch (e) {}
+  $('fxCard').classList.toggle('collapsed', v);
+  $('fxToggle').setAttribute('aria-expanded', String(!v));
+  $('fxCollapse').setAttribute('aria-label', v ? 'Rozwiń tempo i transpozycję' : 'Zwiń tempo i transpozycję');
+}
+$('fxToggle').addEventListener('click', () => setFxCollapsed(!fxCollapsed));
+$('fxCollapse').addEventListener('click', () => setFxCollapsed(!fxCollapsed));
+
+function applyGains(){
+  if (!ctx) return;
+  const n = ctx.currentTime;
+  for (const s of slots){
+    const list = [gains[s.id], seq && seq.gains[curPart + ':' + s.id]];
+    for (const gn of list){
+      if (!gn) continue;
+      try { gn.gain.cancelScheduledValues(n); gn.gain.setTargetAtTime(effGain(s), n, 0.015); } catch (e) {}
+    }
+  }
+}
+function setVol(id, v){
+  const s = slotById(id);
+  if (!s) return;
+  s.vol = clamp(v, 0, Math.pow(10, DB_MAX / 20));
+  applyGains();
+  updateMixerValues();
+  draw();
+  scheduleSave();
+}
+function toggleMS(id, which){
+  const s = slotById(id);
+  if (!hasContent(s)) return;
+  s[which] = !s[which];
+  applyGains();
+  lastMixSig = '';
+  renderMixer();
+  draw();
+  scheduleSave();
+}
+
+function clampOffset(s, o){
+  const others = content().filter((x) => x.id !== s.id);
+  if (!others.length) return 0;
+  let end = 0;
+  for (const x of others) end = Math.max(end, x.offset + x.dur);
+  return Math.round(clamp(o, -s.dur + 0.05, Math.max(0, end - 0.05)) * 1000) / 1000;
+}
+function learnFrom(s){
+  if (!lastRec || lastRec.id !== s.id) return;
+  const d = s.offset - lastRec.orig;
+  learnMs = Math.round(Math.abs(d) <= LEARN_LIMIT ? lastRec.base + d / lastRec.T * 1000 : lastRec.base);
+  try { localStorage.setItem('looper.learnMs', String(learnMs)); } catch (e) {}
+  setLearnUI();
+}
+function setOffset(id, o, delay){
+  const s = slotById(id);
+  if (!hasContent(s)) return;
+  s.offset = clampOffset(s, o);
+  learnFrom(s);
+  if (R && R.bufs[id]) delete R.bufs[id];
+  if (!zoomed) resetView(); else buildPeaks();
+  clampMarks();
+  ui();
+  scheduleRender(delay);
+}
+
+function setLearnUI(){ $('learnV').textContent = (learnMs > 0 ? '+' : learnMs < 0 ? '−' : '') + Math.abs(learnMs) + ' ms'; }
+function setPreroll(v){
+  preroll = v;
+  try { localStorage.setItem('looper.preroll', String(v)); } catch (e) {}
+  document.querySelectorAll('[data-pre]').forEach((b) => b.setAttribute('aria-pressed', String(parseFloat(b.dataset.pre) === preroll)));
+}
+
+/* ---------- tracks UI ---------- */
+let lastSig = '';
+function trackSig(){
+  return JSON.stringify([slots.map((s) => [s.id, hasContent(s), s.name, s.open, shiftId === s.id]),
+    rec ? rec.id : null, recStarting, locked, armed && Date.now() - armed.t < 4000 ? [armed.act, armed.id] : null]);
+}
+function renderTracks(){
+  const sig = trackSig();
+  if (sig !== lastSig){
+    lastSig = sig;
+    $('trackList').innerHTML = slots.map((s, i) => {
+      const has = hasContent(s);
+      const recNow = rec && rec.id === s.id;
+      const recLabel = recNow ? 'Stop' : isArmed('rec', s.id) ? 'Zastąpić?' : 'Nagraj';
+      const clrLabel = isArmed('clear', s.id) ? 'Na pewno?' : 'Wyczyść';
+      const remLabel = isArmed('remove', s.id) ? 'Na pewno?' : 'Usuń';
+      const name = has ? esc(s.name || ('Ślad ' + (i + 1))) : 'Pusty ślad';
+      return '<div class="track" data-id="' + s.id + '">' +
+        '<div class="trk-head"><span class="badge" aria-hidden="true">' + (i + 1) + '</span>' +
+        (has
+          ? '<button class="trk-name" type="button" data-act="open" aria-expanded="' + s.open + '"><span>' + name + '</span>' + CHEVRON + '</button>'
+          : '<span class="trk-name empty"><span>' + name + '</span></span>') +
+        '</div>' +
+        '<div class="trk-btns' + (i === 0 ? ' three' : '') + '">' +
+          '<button class="btn sm recb' + (recNow ? ' rec-active' : '') + '" type="button" data-act="rec"><span class="dot" aria-hidden="true"></span><span class="rec-label">' + recLabel + '</span></button>' +
+          '<button class="btn sm" type="button" data-act="load">Wczytaj</button>' +
+          '<button class="btn sm' + (isArmed('clear', s.id) ? ' warn' : '') + '" type="button" data-act="clear"' + (has ? '' : ' disabled') + '>' + clrLabel + '</button>' +
+          (i > 0 ? '<button class="btn sm' + (isArmed('remove', s.id) ? ' warn' : '') + '" type="button" data-act="remove">' + remLabel + '</button>' : '') +
+        '</div>' +
+        (i > 0 && has ? (
+          '<div class="shift-line"><span class="lbl">Przesunięcie</span>' +
+            '<button class="btn xs" type="button" data-o="-0.1" aria-label="Wcześniej o 100 ms">‹‹</button>' +
+            '<button class="btn xs" type="button" data-o="-0.01" aria-label="Wcześniej o 10 ms">‹</button>' +
+            '<output class="off-out">+0,000 s</output>' +
+            '<button class="btn xs" type="button" data-o="0.01" aria-label="Później o 10 ms">›</button>' +
+            '<button class="btn xs" type="button" data-o="0.1" aria-label="Później o 100 ms">››</button>' +
+          '</div>') : '') +
+        (has && s.open ? (
+          '<div class="trk-more">' +
+            (i > 0 ? (
+              '<div class="grid2">' +
+                '<button class="btn sm" type="button" data-act="shift" aria-pressed="' + (shiftId === s.id) + '"' + (locked ? ' disabled' : '') + '>Przesuwaj palcem</button>' +
+                '<button class="btn sm" type="button" data-act="offzero">Wyrównaj do 1</button>' +
+              '</div>') : '') +
+            '<button class="btn sm" type="button" data-act="save">Zapisz ślad (WAV)</button>' +
+          '</div>') : '') +
+        '</div>';
+    }).join('');
+  }
+  const ref = refOffset();
+  document.querySelectorAll('.track').forEach((el) => {
+    const s = slotById(+el.dataset.id);
+    if (!s) return;
+    const o = el.querySelector('.off-out');
+    if (o) o.textContent = signed(s.offset - ref, 3) + ' s';
+  });
+  $('trkCount').textContent = 'Ślady · ' + slots.length;
+  $('bounce').disabled = !content().length;
+}
+
+function addTrack(){
+  if (slots.length >= MAX_TRACKS) return;
+  slots.push(newSlot());
+  updateCanvasHeight();
+  ui();
+  scheduleSave(true);
+}
+
+function clearSlot(s, quiet){
+  if (gains[s.id] && ctx){ try { gains[s.id].gain.setTargetAtTime(0, ctx.currentTime, 0.01); } catch (e) {} }
+  s.raw = null; s.name = ''; s.dur = 0; s.offset = 0; s.max = 0; s.src = null; s.open = false; s.mute = false; s.solo = false; s.trim = 1; s.vol = 1;
+  if (shiftId === s.id) shiftId = null;
+  if (lastRec && lastRec.id === s.id) lastRec = null;
+  if (R && R.bufs[s.id]) delete R.bufs[s.id];
+  saveSlotData(s);
+  if (!content().length){ if (playing) pause(); R = null; A = null; B = null; paused = 0; zoomed = false; }
+  clampMarks();
+  if (zoomed) fitZoom(); else resetView();
+  ui();
+  scheduleRender(0);
+  if (!quiet) say('Ślad wyczyszczony. Możesz nagrać albo wczytać nowy.');
+}
+
+function removeSlot(s){
+  const i = slots.indexOf(s);
+  if (i <= 0) return;
+  if (hasContent(s)) clearSlot(s, true);
+  slots.splice(i, 1);
+  if (curSid != null) DB.del(dKey(curSid, s.id)).catch(() => {});
+  updateCanvasHeight();
+  if (zoomed) fitZoom(); else resetView();
+  ui();
+  scheduleSave(true);
+  say('Ślad usunięty.');
+}
+
+$('trackList').addEventListener('click', (e) => {
+  const el = e.target.closest('[data-act], [data-o]');
+  if (!el) return;
+  const tr = el.closest('.track');
+  const s = tr && slotById(+tr.dataset.id);
+  if (!s) return;
+  if (el.dataset.o){ setOffset(s.id, s.offset + parseFloat(el.dataset.o), 350); return; }
+  const act = el.dataset.act;
+  if (act === 'rec'){
+    if (rec){ if (rec.id === s.id) stopRecording(); return; }
+    if (recStarting) return;
+    if (hasContent(s) && !isArmed('rec', s.id)){ arm('rec', s.id); say('Nagranie zastąpi ten ślad. Stuknij jeszcze raz, żeby potwierdzić.'); return; }
+    armed = null; startRecording(s.id);
+  } else if (act === 'load'){
+    if (rec) return;
+    pendingLoadId = s.id; $('fileIn').click();
+  } else if (act === 'clear'){
+    if (!hasContent(s)) return;
+    if (!isArmed('clear', s.id)){ arm('clear', s.id); return; }
+    armed = null; clearSlot(s);
+  } else if (act === 'remove'){
+    if (hasContent(s) && !isArmed('remove', s.id)){ arm('remove', s.id); return; }
+    armed = null; removeSlot(s);
+  } else if (act === 'open'){
+    s.open = !s.open; ui();
+  } else if (act === 'shift'){
+    if (locked){ lockedMsg(); return; }
+    shiftId = shiftId === s.id ? null : s.id; ui();
+  } else if (act === 'offzero'){
+    setOffset(s.id, refOffset(), 0);
+  } else if (act === 'save'){
+    shareBlob(wavBlob(s.raw, SR()), safeName(s.name || 'Ślad') + '.wav', 'audio/wav');
+  }
+});
+/* ---------- mixer (volume faders, mute, solo) next to the lanes ---------- */
+let lastMixSig = '', faderDrag = null;
+function laneCssH(){
+  const h = canvas.clientHeight || parseFloat(canvas.style.height) || 170;
+  return (h - 26) / Math.max(1, slots.length);
+}
+function renderMixer(){
+  const lh = laneCssH();
+  const sig = JSON.stringify([slots.map((s) => [s.id, hasContent(s), s.mute, s.solo]), Math.round(lh)]);
+  if (sig !== lastMixSig){
+    lastMixSig = sig;
+    $('mixer').innerHTML = slots.map((s, i) => {
+      const style = 'height:' + lh.toFixed(1) + 'px';
+      if (!hasContent(s)) return '<div class="strip" style="' + style + '"></div>';
+      return '<div class="strip' + (audible(s) ? '' : ' off') + '" data-id="' + s.id + '" style="' + style + '">' +
+        '<div class="ms">' +
+          '<button class="btn mute" type="button" data-ms="mute" aria-pressed="' + !!s.mute + '" aria-label="Wycisz ślad ' + (i + 1) + '">M</button>' +
+          '<button class="btn solo" type="button" data-ms="solo" aria-pressed="' + !!s.solo + '" aria-label="Solo ślad ' + (i + 1) + '">S</button>' +
+        '</div>' +
+        '<div class="fader" role="slider" tabindex="0" aria-label="Głośność śladu ' + (i + 1) + '" aria-valuemin="-48" aria-valuemax="12">' +
+          '<span class="rail"></span><span class="fill"></span><span class="unity"></span><span class="knob"></span><span class="bubble"></span>' +
+        '</div></div>';
+    }).join('');
+  }
+  updateMixerValues();
+}
+function updateMixerValues(){
+  document.querySelectorAll('#mixer .strip[data-id]').forEach((el) => {
+    const s = slotById(+el.dataset.id);
+    if (!s) return;
+    const f = el.querySelector('.fader');
+    const span = Math.max(1, f.clientHeight - 14);
+    const y = volToPos(s.vol) * span;
+    el.querySelector('.fill').style.height = y + 'px';
+    el.querySelector('.knob').style.bottom = (7 + y) + 'px';
+    el.querySelector('.unity').style.bottom = (7 + UNITY * span) + 'px';
+    const bub = el.querySelector('.bubble');
+    bub.style.bottom = (7 + y) + 'px';
+    bub.textContent = dbLabel(s.vol);
+    const db = volToDb(s.vol);
+    f.setAttribute('aria-valuenow', String(db === -Infinity ? -48 : Math.round(db)));
+    f.setAttribute('aria-valuetext', dbLabel(s.vol));
+    el.classList.toggle('off', !audible(s));
+  });
+}
+$('mixer').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-ms]');
+  if (!b) return;
+  toggleMS(+b.closest('.strip').dataset.id, b.dataset.ms);
+});
+$('mixer').addEventListener('pointerdown', (e) => {
+  const strip = e.target.closest('.strip[data-id]');
+  if (!strip || e.target.closest('[data-ms]')) return;
+  const f = strip.querySelector('.fader');
+  const s = slotById(+strip.dataset.id);
+  if (!s || !f) return;
+  e.preventDefault();
+  try { strip.setPointerCapture(e.pointerId); } catch (err) {}
+  strip.classList.add('dragging');
+  faderDrag = { id: s.id, strip, y0: e.clientY, p0: volToPos(s.vol), span: Math.max(180, f.clientHeight - 14), moved: false };
+});
+$('mixer').addEventListener('pointermove', (e) => {
+  if (!faderDrag) return;
+  e.preventDefault();
+  const dy = faderDrag.y0 - e.clientY;
+  if (Math.abs(dy) > 2) faderDrag.moved = true;
+  if (!faderDrag.moved) return;
+  setVol(faderDrag.id, posToVol(clamp(faderDrag.p0 + dy / faderDrag.span, 0, 1)));
+});
+const endFader = () => {
+  if (faderDrag && faderDrag.strip) faderDrag.strip.classList.remove('dragging');
+  faderDrag = null;
+  document.querySelectorAll('#mixer .strip.dragging').forEach((el) => el.classList.remove('dragging'));
+};
+$('mixer').addEventListener('pointerup', endFader);
+$('mixer').addEventListener('pointercancel', endFader);
+$('mixer').addEventListener('dblclick', (e) => {
+  const f = e.target.closest('.fader');
+  if (f) setVol(+f.closest('.strip').dataset.id, 1);
+});
+
+/* ---------- red record dots next to the lanes (when the tracks card is collapsed) ---------- */
+let tracksCollapsed = false, lastDotSig = '';
+try { tracksCollapsed = localStorage.getItem('looper.tracksCollapsed') === '1'; } catch (e) {}
+function renderRecDots(){
+  const box = $('recdots');
+  box.hidden = !tracksCollapsed;
+  if (!tracksCollapsed) return;
+  const lh = laneCssH();
+  const sig = JSON.stringify([slots.map((s) => [s.id, hasContent(s), isArmed('rec', s.id)]), rec ? rec.id : null, Math.round(lh)]);
+  if (sig === lastDotSig) return;
+  lastDotSig = sig;
+  box.innerHTML = slots.map((s, i) => {
+    const active = rec && rec.id === s.id;
+    const label = active ? 'Zatrzymaj nagrywanie' : 'Nagraj do śladu ' + (i + 1);
+    return '<div class="recdot-cell" style="height:' + lh.toFixed(1) + 'px">' +
+      '<button class="recdot' + (active ? ' rec-active' : '') + (isArmed('rec', s.id) ? ' armed' : '') + '" type="button" data-id="' + s.id + '" aria-label="' + label + '"><span></span></button></div>';
+  }).join('');
+}
+function recTap(s){
+  if (rec){ if (rec.id === s.id) stopRecording(); return; }
+  if (recStarting) return;
+  if (hasContent(s) && !isArmed('rec', s.id)){
+    arm('rec', s.id);
+    say('Nagranie zastąpi ślad ' + (slots.indexOf(s) + 1) + '. Stuknij jeszcze raz, żeby potwierdzić.');
+    return;
+  }
+  armed = null; startRecording(s.id);
+}
+$('recdots').addEventListener('click', (e) => {
+  const b = e.target.closest('.recdot');
+  if (!b) return;
+  const s = slotById(+b.dataset.id);
+  if (s) recTap(s);
+});
+function setCollapsed(v){
+  tracksCollapsed = v;
+  try { localStorage.setItem('looper.tracksCollapsed', v ? '1' : '0'); } catch (e) {}
+  $('tracks').classList.toggle('collapsed', v);
+  $('trkToggle').setAttribute('aria-expanded', String(!v));
+  $('trkCollapse').setAttribute('aria-label', v ? 'Rozwiń ślady' : 'Zwiń ślady');
+  lastDotSig = '';
+  renderRecDots();
+  resize(); lastMixSig = ''; renderMixer();
+}
+$('trkToggle').addEventListener('click', () => setCollapsed(!tracksCollapsed));
+$('trkCollapse').addEventListener('click', () => setCollapsed(!tracksCollapsed));
+$('addTrackMini').addEventListener('click', () => addTrack());
+$('bounceMini').addEventListener('click', () => openBounce());
+$('mixer').addEventListener('keydown', (e) => {
+  const f = e.target.closest('.fader');
+  if (!f) return;
+  const s = slotById(+f.closest('.strip').dataset.id);
+  if (!s) return;
+  const step = Math.pow(10, (e.shiftKey ? 3 : 1) / 20);
+  if (e.key === 'ArrowUp' || e.key === 'ArrowRight'){ e.preventDefault(); e.stopPropagation(); setVol(s.id, Math.max(s.vol, 0.004) * step); }
+  else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft'){ e.preventDefault(); e.stopPropagation(); setVol(s.id, s.vol / step < 0.004 ? 0 : s.vol / step); }
+});
+
+/* ---------- waveform ---------- */
+function updateCanvasHeight(){
+  const n = Math.max(1, slots.length);
+  const wide = window.innerWidth >= 700;
+  canvas.style.height = ((wide ? 140 : 110) + (wide ? 66 : 54) * n) + 'px';
+  resize();
+  renderMixer();
+  renderRecDots();
+}
+function resetView(){ view = { s: 0, e: timelineDur() }; buildPeaks(); }
+function fitZoom(){
+  if (A == null || B == null){ zoomed = false; resetView(); return; }
+  const pad = Math.max(0.3, (B - A) * 0.2);
+  view = { s: Math.max(0, A - pad), e: Math.min(timelineDur(), B + pad) };
+  buildPeaks();
+}
+function toggleZoom(){
+  if (A == null || B == null) return;
+  zoomed = !zoomed;
+  if (zoomed) fitZoom(); else resetView();
+  ui();
+}
+
+function buildPeaks(){
+  lanes = [];
+  if (!canvas.width || !canvas.clientWidth) return;
+  const dpr = canvas.width / canvas.clientWidth;
+  const step = 3 * dpr;
+  const n = Math.max(1, Math.floor(canvas.width / step));
+  const sr = SR();
+  const colDur = (view.e - view.s) / n;
+  slots.forEach((s, idx) => {
+    const L = { id: s.id, idx, start: s.offset, dur: s.dur, n, step, vals: null, norm: 1 };
+    if (hasContent(s)){
+      const x = s.raw, vals = new Float32Array(n);
+      const stride = Math.max(1, Math.floor(colDur * sr / 1500));
+      for (let i = 0; i < n; i++){
+        let a = Math.floor((view.s + i * colDur - s.offset) * sr);
+        let b = Math.floor((view.s + (i + 1) * colDur - s.offset) * sr);
+        if (b <= 0 || a >= x.length) continue;
+        if (a < 0) a = 0;
+        if (b > x.length) b = x.length;
+        if (b <= a) b = a + 1;
+        let m = 0;
+        for (let j = a; j < b; j += stride){ const v = x[j]; const av = v < 0 ? -v : v; if (av > m) m = av; }
+        vals[i] = m;
+      }
+      L.vals = vals; L.norm = s.trim || 1;
+    }
+    lanes.push(L);
+  });
+}
+
+function tToX(t, w){ return (t - view.s) / (view.e - view.s) * w; }
+function xToT(x, w){ return clamp(view.s + (x / w) * (view.e - view.s), 0, timelineDur()); }
+
+function roundRect(x, y, w, h, r){
+  g.beginPath();
+  g.moveTo(x + r, y); g.lineTo(x + w - r, y); g.quadraticCurveTo(x + w, y, x + w, y + r);
+  g.lineTo(x + w, y + h - r); g.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  g.lineTo(x + r, y + h); g.quadraticCurveTo(x, y + h, x, y + h - r);
+  g.lineTo(x, y + r); g.quadraticCurveTo(x, y, x + r, y);
+  g.closePath();
+}
+
+function draw(){
+  const W = canvas.width, H = canvas.height;
+  if (!W) return;
+  const cs = getComputedStyle(document.documentElement);
+  const col = (n) => cs.getPropertyValue(n).trim();
+  const cWave = col('--wave'), cAcc = col('--accent'), cHot = col('--hot'), cHotSoft = col('--hot-soft'),
+        cInk = col('--ink'), cOn = col('--on-accent'), cLine = col('--line'),
+        cMuted = col('--muted'), cPanel = col('--panel'), cRec = col('--rec'), cRecSoft = col('--rec-soft');
+  const dpr = W / canvas.clientWidth;
+  g.clearRect(0, 0, W, H);
+
+  const top = 26 * dpr;
+  const has = content().length > 0;
+  const xa = has && A != null ? tToX(A, W) : null;
+  const xb = has && B != null ? tToX(B, W) : null;
+
+  if (xa != null && xb != null){
+    g.globalAlpha = loopOn ? 1 : 0.45;
+    g.fillStyle = cHotSoft;
+    g.fillRect(xa, top, xb - xa, H - top);
+    g.globalAlpha = 1;
+  }
+
+  const nL = Math.max(1, lanes.length);
+  const laneH = (H - top) / nL;
+  lanes.forEach((L, j) => {
+    const y0 = top + j * laneH;
+    const mid = y0 + laneH / 2;
+    const amp = laneH / 2 - 3 * dpr;
+    if (rec && rec.id === L.id){ g.fillStyle = cRecSoft; g.fillRect(0, y0, W, laneH); }
+    if (j > 0){ g.fillStyle = cLine; g.fillRect(0, Math.round(y0), W, Math.max(1, dpr)); }
+    const ls = slotById(L.id);
+    const quiet = ls && hasContent(ls) && !audible(ls);
+    if (L.vals){
+      g.globalAlpha = quiet ? 0.28 : 1;
+      const ex0 = clamp(tToX(L.start, W), 0, W), ex1 = clamp(tToX(L.start + L.dur, W), 0, W);
+      g.fillStyle = cLine;
+      if (ex1 > ex0) g.fillRect(ex0, Math.round(mid), ex1 - ex0, Math.max(1, dpr));
+      const bw = Math.max(1, L.step - dpr);
+      const k = L.norm * (ls ? ls.vol : 1) * 1.25;
+      for (let i = 0; i < L.n; i++){
+        const h = Math.min(1, L.vals[i] * k) * amp;
+        if (h < 0.5 * dpr) continue;
+        const x = i * L.step;
+        const inLoop = xa != null && xb != null && x + bw > xa && x < xb;
+        g.fillStyle = inLoop ? cHot : cWave;
+        g.fillRect(x, mid - h, bw, h * 2);
+      }
+      g.globalAlpha = 1;
+    }
+    const volTxt = ls && hasContent(ls) ? (ls.mute ? 'M' : ls.solo ? 'S' : '') + (dbLabel(ls.vol) !== '0 dB' ? ' ' + dbLabel(ls.vol) : '') : '';
+    if (nL > 1 || volTxt){
+      g.font = '800 ' + Math.round(11 * dpr) + 'px system-ui, -apple-system, sans-serif';
+      g.textBaseline = 'middle'; g.textAlign = 'left';
+      const label = String(L.idx + 1) + (volTxt ? '  ' + volTxt.trim() : '');
+      const tw = g.measureText(label).width;
+      g.fillStyle = cPanel;
+      roundRect(2 * dpr, y0 + 4 * dpr, tw + 10 * dpr, 16 * dpr, 4 * dpr); g.fill();
+      g.fillStyle = cMuted;
+      g.fillText(label, 7 * dpr, y0 + 12.5 * dpr);
+    }
+  });
+
+  if (!has && !rec){
+    g.fillStyle = cMuted;
+    g.font = '600 ' + Math.round(14 * dpr) + 'px system-ui, -apple-system, sans-serif';
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText('Wczytaj albo nagraj ślad', W / 2, top + (H - top) / 2);
+  }
+
+  g.font = '800 ' + Math.round(12 * dpr) + 'px system-ui, -apple-system, sans-serif';
+  g.textBaseline = 'middle'; g.textAlign = 'center';
+  const flag = (x, label, right) => {
+    if (x < -2 * dpr || x > W + 2 * dpr) return;
+    g.fillStyle = cAcc;
+    g.fillRect(Math.round(x - dpr), top - 4 * dpr, 2 * dpr, H - top + 4 * dpr);
+    const fw = 22 * dpr, fh = 20 * dpr;
+    const fx = right ? x - dpr : x + dpr - fw;
+    roundRect(fx, 2 * dpr, fw, fh, 5 * dpr);
+    g.fill();
+    g.fillStyle = cOn;
+    g.fillText(label, fx + fw / 2, 2 * dpr + fh / 2 + 0.5 * dpr);
+  };
+  const close = xa != null && xb != null && xb - xa < 46 * dpr;
+  if (xa != null) flag(xa, 'A', !close);
+  if (xb != null) flag(xb, 'B', close);
+
+  if (has || rec){
+    const xp = tToX(pos(), W);
+    if (xp >= 0 && xp <= W){
+      g.fillStyle = rec ? cRec : cInk;
+      g.fillRect(Math.round(xp - dpr), top - 2 * dpr, 2 * dpr, H - top + 2 * dpr);
+    }
+  }
+}
+
+function kick(){
+  if (raf) return;
+  const tick = () => {
+    raf = 0; draw(); updateNow();
+    if (rec && !rec.stopping){
+      const lab = document.querySelector('.track[data-id="' + rec.id + '"] .rec-label');
+      if (lab) lab.textContent = 'Stop · ' + fmt(Math.max(0, ctx.currentTime - rec.when)).slice(0, -3);
+      if (rec.stopAt != null && pos() >= rec.stopAt) stopRecording();
+    }
+    if (seqPlaying && seq){
+      const cur = seqCurrent();
+      if (cur){
+        if (seqFollow !== cur.seg.part){
+          seqFollow = cur.seg.part;
+          if (cur.seg.part !== curPart) switchPart(cur.seg.part, { instant: true });
+        }
+        updateSeqChips(cur);
+      }
+    }
+    if (playing || rec || seqPlaying) raf = requestAnimationFrame(tick);
+  };
+  raf = requestAnimationFrame(tick);
+}
+
+function resize(){
+  const dpr = Math.min(window.devicePixelRatio || 1, 3);
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  if (!w || !h) return;
+  const W = Math.round(w * dpr), H = Math.round(h * dpr);
+  if (canvas.width !== W || canvas.height !== H){ canvas.width = W; canvas.height = H; }
+  buildPeaks(); draw();
+}
+
+/* ---------- UI ---------- */
+function updateNow(){ $('now').textContent = fmt(pos()); }
+
+function ui(){
+  renderTracks();
+  renderMixer();
+  renderRecDots();
+  if (shiftId != null && !hasContent(slotById(shiftId))) shiftId = null;
+  const sIdx = slots.findIndex((s) => s.id === shiftId);
+  $('shiftNote').hidden = shiftId == null;
+  if (shiftId != null) $('shiftNote').textContent = 'Przesuwasz ślad ' + (sIdx + 1) + ': przeciągnij palcem w bok. Wyłącz to w szczegółach śladu, żeby znów zaznaczać pętlę.';
+  canvas.classList.toggle('shifting', shiftId != null);
+  canvas.classList.toggle('locked', locked);
+
+  const has = content().length > 0;
+  $('dur').textContent = '/ ' + fmt(has ? timelineDur() : 0);
+  $('tA').textContent = fmt(A);
+  $('tB').textContent = fmt(B);
+  $('tLen').textContent = (A != null && B != null) ? 'pętla ' + secs(B - A) : 'brak pętli';
+  const lk = $('lock');
+  lk.innerHTML = locked ? ICON_LOCK : ICON_UNLOCK;
+  lk.setAttribute('aria-pressed', String(locked));
+  lk.setAttribute('aria-label', locked ? 'Odblokuj pętlę' : 'Zablokuj pętlę');
+  const pb = $('play');
+  const isOn = playing || seqPlaying;
+  pb.innerHTML = isOn ? ICON_PAUSE : ICON_PLAY;
+  pb.setAttribute('aria-label', isOn ? 'Pauza' : (playMode === 'seq' ? 'Odtwarzaj sekwencję' : 'Odtwarzaj'));
+  const hasLoop = A != null && B != null;
+  const lb = $('loop');
+  lb.disabled = !hasLoop || locked;
+  lb.setAttribute('aria-pressed', String(hasLoop && loopOn));
+  lb.textContent = 'Pętla: ' + (loopOn ? 'wł.' : 'wył.');
+  const canPlay = playMode === 'seq' ? PARTS.some(partHas) : has;
+  document.querySelectorAll('[data-skip]').forEach((b) => { b.disabled = !canPlay; });
+  $('toStart').disabled = !canPlay;
+  renderParts();
+  $('clearLoop').disabled = (A == null && B == null) || locked;
+  $('tuneA').setAttribute('aria-pressed', String(tune === 'A'));
+  $('tuneB').setAttribute('aria-pressed', String(tune === 'B'));
+  document.querySelectorAll('[data-d]').forEach((b) => { b.disabled = locked || !hasLoop; });
+  const m = sessMeta(curSid);
+  $('sessName').textContent = m ? m.name : 'Sesja';
+  updateNow();
+  draw();
+  scheduleSave();
+}
+
+/* ---------- parts bar, sequence strip and wheel picker ---------- */
+let pickIdx = -1, seqCollapsed = false;
+try { seqCollapsed = localStorage.getItem('looper.seqCollapsed') === '1'; } catch (e) {}
+
+function switchPart(k, opts){
+  opts = opts || {};
+  if (k === curPart || rec || recStarting || !parts[k]) return;
+  if (playing) pause();
+  stashPart();
+  const dir = PARTS.indexOf(k) > PARTS.indexOf(curPart) ? 1 : -1;
+  const pv = $('partView');
+  const doSwitch = () => {
+    applyPart(k);
+    syncFx();
+    lastSig = ''; lastMixSig = ''; lastDotSig = '';
+    if (bounceWorker == null) bounceUI('closed');
+    updateCanvasHeight(); resetView();
+    ui();
+    if (partHas(k) && (!R || renderDirty || R.T !== curT() || R.P !== curP())) scheduleRender(0);
+    scheduleSave();
+  };
+  let reduce = false;
+  try { reduce = matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+  if (opts.instant || reduce || !pv.animate){ doSwitch(); return; }
+  const out = pv.animate([{ transform: 'translateX(0)', opacity: 1 }, { transform: 'translateX(' + (-dir * 56) + 'px)', opacity: 0 }], { duration: 120, easing: 'ease-in' });
+  out.onfinish = () => {
+    doSwitch();
+    pv.animate([{ transform: 'translateX(' + (dir * 56) + 'px)', opacity: 0 }, { transform: 'translateX(0)', opacity: 1 }], { duration: 170, easing: 'ease-out' });
+  };
+}
+
+let lastStripSig = '';
+function renderParts(){
+  document.querySelectorAll('[data-part]').forEach((b) => {
+    const k = b.dataset.part;
+    b.setAttribute('aria-pressed', String(k === curPart));
+    b.classList.toggle('has', partHas(k));
+    b.setAttribute('aria-label', 'Część ' + k + (partHas(k) ? ', ma nagrania' : ', pusta'));
+  });
+  document.querySelectorAll('[data-mode]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === playMode)));
+  $('partsCard').classList.toggle('collapsed', seqCollapsed);
+  $('seqCollapse').setAttribute('aria-label', seqCollapsed ? 'Rozwiń sekwencję' : 'Zwiń sekwencję');
+  renderSeqStrip();
+}
+function renderSeqStrip(){
+  const sig = JSON.stringify([sequence, pickIdx, PARTS.map(partHas)]);
+  if (sig === lastStripSig) return;
+  lastStripSig = sig;
+  $('seqStrip').innerHTML = sequence.map((st, i) =>
+    '<button class="step' + (i === pickIdx ? ' editing' : '') + (partHas(st.p) ? '' : ' empty') + '" type="button" data-step="' + i + '" aria-label="Część ' + st.p + ', ' + st.n + ' razy">' +
+      '<b>' + st.p + '</b><span class="x">×</span>' + st.n + '<small class="cnt"></small></button>').join('') +
+    '<button class="step add" type="button" data-step="add" aria-label="Dodaj klocek do sekwencji">+</button>';
+}
+function updateSeqChips(cur){
+  document.querySelectorAll('#seqStrip .step[data-step]').forEach((el) => {
+    if (el.dataset.step === 'add') return;
+    const i = +el.dataset.step;
+    const on = !!(cur && cur.seg.idx === i);
+    el.classList.toggle('playing', on);
+    if (on){ const c = el.querySelector('.cnt'); const t = (cur.seg.r + 1) + '/' + cur.seg.n; if (c.textContent !== t) c.textContent = t; }
+  });
+}
+function clearSeqChips(){ document.querySelectorAll('#seqStrip .step.playing').forEach((el) => el.classList.remove('playing')); }
+
+function setPlayMode(m){
+  if (m === playMode) return;
+  if (seqPlaying) pauseSeq();
+  if (playing) pause();
+  playMode = m;
+  clearSeqChips();
+  if (m === 'seq' && !sequence.length) say('Dodaj klocek do sekwencji przyciskiem +.');
+  else if (m === 'seq') say('Tryb sekwencji: ▶ gra klocki po kolei.');
+  ui(); scheduleSave();
+}
+
+/* wheel picker (scroll-snap, like the iPhone timer) */
+const ITEM_H = 40;
+function buildWheel(id, values){
+  const el = $(id);
+  el.innerHTML = '<div class="wheel-pad"></div>' + values.map((v, i) => '<div class="wheel-item" data-i="' + i + '">' + v + '</div>').join('') + '<div class="wheel-pad"></div>';
+  let t = 0;
+  el.addEventListener('scroll', () => { styleWheel(el); clearTimeout(t); t = setTimeout(() => onWheelSettle(id), 110); }, { passive: true });
+  el.addEventListener('click', (e) => { const it = e.target.closest('.wheel-item'); if (it) setWheel(id, +it.dataset.i, true); });
+}
+function styleWheel(el){
+  const c = el.scrollTop / ITEM_H;
+  el.querySelectorAll('.wheel-item').forEach((it) => {
+    const d = Math.abs(+it.dataset.i - c);
+    it.style.opacity = String(Math.max(0.25, 1 - d * 0.3));
+    it.style.transform = 'scale(' + Math.max(0.74, 1 - d * 0.09).toFixed(3) + ')';
+  });
+}
+function setWheel(id, idx, smooth){
+  const el = $(id);
+  try { el.scrollTo({ top: idx * ITEM_H, behavior: smooth ? 'smooth' : 'auto' }); } catch (e) { el.scrollTop = idx * ITEM_H; }
+  styleWheel(el);
+}
+function onWheelSettle(id){
+  if (pickIdx < 0 || !sequence[pickIdx]) return;
+  const idx = Math.round($(id).scrollTop / ITEM_H);
+  const st = sequence[pickIdx];
+  const before = st.p + st.n;
+  if (id === 'wheelPart') st.p = PARTS[clamp(idx, 0, PARTS.length - 1)];
+  else st.n = clamp(idx + 1, 1, 32);
+  if (st.p + st.n !== before){ renderSeqStrip(); scheduleSave(); seqEdited(); }
+}
+function openPicker(i){
+  pickIdx = i;
+  $('picker').hidden = false;
+  lastStripSig = ''; renderSeqStrip();
+  requestAnimationFrame(() => {
+    setWheel('wheelPart', PARTS.indexOf(sequence[i].p));
+    setWheel('wheelCount', sequence[i].n - 1);
+  });
+}
+function closePicker(){ pickIdx = -1; $('picker').hidden = true; lastStripSig = ''; renderSeqStrip(); }
+
+$('partsCard').addEventListener('click', (e) => {
+  const pb = e.target.closest('[data-part]');
+  if (pb){ switchPart(pb.dataset.part); return; }
+  const mb = e.target.closest('[data-mode]');
+  if (mb){ setPlayMode(mb.dataset.mode); return; }
+  const sb = e.target.closest('[data-step]');
+  if (sb){
+    if (sb.dataset.step === 'add'){
+      const last = sequence[sequence.length - 1];
+      sequence.push({ p: curPart, n: last ? last.n : 4 });
+      scheduleSave(); seqEdited();
+      openPicker(sequence.length - 1);
+      const strip = $('seqStrip'); strip.scrollLeft = strip.scrollWidth;
+      return;
+    }
+    const i = +sb.dataset.step;
+    if (pickIdx === i) closePicker(); else openPicker(i);
+  }
+});
+$('pkLeft').addEventListener('click', () => {
+  if (pickIdx <= 0) return;
+  const i = pickIdx; [sequence[i - 1], sequence[i]] = [sequence[i], sequence[i - 1]];
+  pickIdx = i - 1; lastStripSig = ''; renderSeqStrip(); scheduleSave(); seqEdited();
+});
+$('pkRight').addEventListener('click', () => {
+  if (pickIdx < 0 || pickIdx >= sequence.length - 1) return;
+  const i = pickIdx; [sequence[i + 1], sequence[i]] = [sequence[i], sequence[i + 1]];
+  pickIdx = i + 1; lastStripSig = ''; renderSeqStrip(); scheduleSave(); seqEdited();
+});
+$('pkDel').addEventListener('click', () => {
+  if (pickIdx < 0) return;
+  sequence.splice(pickIdx, 1);
+  closePicker(); scheduleSave(); seqEdited();
+  if (!sequence.length && seqPlaying) pauseSeq();
+});
+$('pkDone').addEventListener('click', closePicker);
+$('seqCollapse').addEventListener('click', () => {
+  seqCollapsed = !seqCollapsed;
+  try { localStorage.setItem('looper.seqCollapsed', seqCollapsed ? '1' : '0'); } catch (e) {}
+  renderParts();
+});
+buildWheel('wheelPart', PARTS);
+buildWheel('wheelCount', Array.from({ length: 32 }, (_, i) => String(i + 1)));
+
+/* ---------- copy a whole part (tracks, loop, mixer) into another ---------- */
+let copyArm = null;
+function renderCopyRow(){
+  $('copyLabel').textContent = 'Kopiuj część ' + curPart + ' do:';
+  $('copyTargets').innerHTML = PARTS.filter((k) => k !== curPart).map((k) =>
+    '<button class="btn sm' + (copyArm === k ? ' warn' : '') + '" type="button" data-copyto="' + k + '">' + (copyArm === k ? 'Zastąpić ' + k + '?' : k) + '</button>').join('');
+}
+function openCopy(){
+  if (rec || recStarting) return;
+  stashPart();
+  if (!partHas(curPart)){ say('Ta część jest pusta, nie ma czego kopiować.'); return; }
+  copyArm = null;
+  $('copyRow').hidden = false;
+  renderCopyRow();
+}
+function copyPart(from, to){
+  if (seqPlaying) pauseSeq();
+  if (playing) pause();
+  stashPart();
+  const src = parts[from], dst = parts[to];
+  for (const sl of dst.slots) if (curSid != null) DB.del(dKey(curSid, sl.id)).catch(() => {});
+  const map = {};
+  const fresh = src.slots.map((sl) => { const n = Object.assign({}, sl, { id: nextId++, open: false }); map[sl.id] = n.id; return n; });
+  dst.slots = fresh;
+  dst.A = src.A; dst.B = src.B; dst.loopOn = src.loopOn !== false; dst.locked = !!src.locked;
+  dst.paused = src.A != null ? src.A : 0; dst.tune = 'A'; dst.lastRec = null;
+  dst.tempoPct = src.tempoPct || 0; dst.semi = src.semi || 0;
+  if (src.R){
+    const bufs = {};
+    for (const k of Object.keys(src.R.bufs)) if (map[k] != null) bufs[map[k]] = src.R.bufs[k];
+    dst.R = Object.assign({}, src.R, { bufs }); dst.renderDirty = !!src.renderDirty;
+  } else { dst.R = null; dst.renderDirty = true; }
+  for (const sl of fresh) if (hasContent(sl) && curSid != null) DB.put(dKey(curSid, sl.id), slotSrc(sl)).catch(() => {});
+  scheduleSave(true);
+  lastStripSig = '';
+  if (to === curPart){
+    applyPart(to);
+    syncFx();
+    lastSig = ''; lastMixSig = ''; lastDotSig = '';
+    updateCanvasHeight(); resetView(); ui();
+  } else switchPart(to);
+  say('Część ' + from + ' skopiowana do ' + to + '. Teraz możesz w niej podmienić wybraną partię.');
+}
+$('partCopy').addEventListener('click', () => { if ($('copyRow').hidden) openCopy(); else { $('copyRow').hidden = true; copyArm = null; } });
+$('copyCancel').addEventListener('click', () => { $('copyRow').hidden = true; copyArm = null; });
+$('copyTargets').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-copyto]');
+  if (!b) return;
+  const k = b.dataset.copyto;
+  if (partHas(k) && copyArm !== k){
+    copyArm = k; renderCopyRow();
+    setTimeout(() => { if (copyArm === k){ copyArm = null; if (!$('copyRow').hidden) renderCopyRow(); } }, 4000);
+    return;
+  }
+  copyArm = null; $('copyRow').hidden = true;
+  copyPart(curPart, k);
+});
+
+/* ---------- backup of every session in one file ("LOOPERB1") ---------- */
+let backupBlob = null, backupTimer = 0;
+async function buildBackup(){
+  clearTimeout(saveTimer); await writeState();
+  const out = { format: 'looper-backup', version: 1, created: Date.now(), sessions: [] };
+  const payloads = [];
+  for (const m of sessions.list){
+    const st = await DB.get(stKey(m.sid)).catch(() => null);
+    if (!st) continue;
+    const items = [];
+    for (const id of stSlotIds(st)){
+      const src = await DB.get(dKey(m.sid, id)).catch(() => null);
+      if (!src || !src.data) continue;
+      const bytes = new Uint8Array(src.data);
+      items.push({ id, kind: src.kind, sr: src.sr || null, name: src.name || '', bytes: bytes.length });
+      payloads.push(bytes);
+    }
+    out.sessions.push({ name: m.name, created: m.created, updated: m.updated, tracks: m.tracks || 0, state: st, items });
+  }
+  const json = new TextEncoder().encode(JSON.stringify(out));
+  const head = new Uint8Array(12);
+  head.set([76, 79, 79, 80, 69, 82, 66, 49]);
+  new DataView(head.buffer).setUint32(8, json.length, true);
+  return new Blob([head, json].concat(payloads), { type: 'application/octet-stream' });
+}
+async function restoreBackup(buf){
+  const u8 = new Uint8Array(buf);
+  const jl = new DataView(buf).getUint32(8, true);
+  const meta = JSON.parse(new TextDecoder().decode(u8.subarray(12, 12 + jl)));
+  let p = 12 + jl, n = 0;
+  clearTimeout(saveTimer); await writeState();
+  for (const ss of (meta.sessions || [])){
+    const sid = sessions.nextSid++;
+    for (const it of (ss.items || [])){
+      const data = buf.slice(p, p + it.bytes); p += it.bytes;
+      await DB.put(dKey(sid, it.id), it.kind === 'file' ? { kind: 'file', name: it.name, data } : { kind: 'pcm', sr: it.sr, name: it.name, data });
+    }
+    await DB.put(stKey(sid), ss.state);
+    let name = ss.name || 'Sesja';
+    if (sessions.list.some((x) => x.name === name)) name += ' (z kopii)';
+    sessions.list.push({ sid, name, created: ss.created || Date.now(), updated: ss.updated || Date.now(), tracks: ss.tracks || 0 });
+    n++;
+  }
+  await saveIndex();
+  renderSessions();
+  say('Przywrócono ' + n + ' ' + (n === 1 ? 'sesję' : (n >= 2 && n <= 4) ? 'sesje' : 'sesji') + '. Znajdziesz je na liście sesji (stuknij nazwę sesji u góry).');
+}
+async function openLooperFile(file){
+  if (!file) return;
+  let magic = '';
+  try { magic = String.fromCharCode.apply(null, new Uint8Array(await file.slice(0, 8).arrayBuffer())); } catch (e) {}
+  if (magic === 'LOOPERB1'){
+    say('Przywracam kopię…', false, true);
+    try { await restoreBackup(await file.arrayBuffer()); }
+    catch (e) { say('Nie udało się przywrócić kopii: ' + (e && e.message ? e.message : e) + '.', true); }
+    return;
+  }
+  if (magic === 'LOOPERS1') return importSessionFile(file);
+  say('To nie jest plik Loopera (sesji ani kopii zapasowej).', true);
+}
+$('backupBtn').addEventListener('click', async () => {
+  const b = $('backupBtn');
+  if (backupBlob){
+    const d = new Date();
+    shareBlob(backupBlob, 'Looper kopia ' + d.getDate() + '.' + (d.getMonth() + 1) + '.' + d.getFullYear() + '.looper', 'application/octet-stream');
+    return;
+  }
+  b.disabled = true; b.textContent = 'Przygotowuję…';
+  try {
+    backupBlob = await buildBackup();
+    b.textContent = 'Udostępnij kopię (' + (backupBlob.size / 1e6).toFixed(1).replace('.', ',') + ' MB)';
+    clearTimeout(backupTimer);
+    backupTimer = setTimeout(() => { backupBlob = null; b.textContent = 'Zapisz kopię'; }, 180000);
+  } catch (e) {
+    backupBlob = null; b.textContent = 'Zapisz kopię';
+    say('Nie udało się przygotować kopii.', true);
+  }
+  b.disabled = false;
+});
+$('restoreBtn').addEventListener('click', () => $('restoreIn').click());
+$('restoreIn').addEventListener('change', (e) => { const f = e.target.files && e.target.files[0]; e.target.value = ''; openLooperFile(f); });
+
+/* ---------- sessions ---------- */
+function resetRuntime(){
+  if (playing) pause();
+  if (seqPlaying || seq){ stopSeqNodes(); seqPlaying = false; }
+  seqPausedG = 0; seqFollow = null; pickIdx = -1;
+  killSources();
+  R = null; playR = null; renderDirty = false;
+  A = null; B = null; loopOn = true; locked = false; zoomed = false; shiftId = null; lastRec = null; paused = 0; tune = 'A';
+  armed = null; lastSig = '';
+}
+
+async function restoreData(src){
+  if (!src) return null;
+  const sr = SR();
+  let raw;
+  if (src.kind === 'file'){
+    raw = mixdown(await decode(src.data.slice(0)));
+  } else if (src.kind === 'pcm'){
+    raw = fromInt16(src.data);
+    if (src.sr && src.sr !== sr){
+      const P = src.sr / sr, y = new Float32Array(resampleLen(raw.length, P));
+      for (const f of resampleGen(raw, P, y)); raw = y;
+    }
+  } else return null;
+  return { raw, dur: raw.length / sr, max: absMax(raw), src: src.kind === 'file' ? src : { kind: 'pcm' }, name: src.name };
+}
+
+async function loadSlotsFrom(sid, metas){
+  const out = [];
+  for (const m of metas){
+    const sl = { id: m.id, name: m.name || '', raw: null, dur: 0, vol: m.vol != null ? m.vol : 1, trim: m.trim || 1, offset: m.offset || 0, max: 0, src: null, open: false, mute: !!m.mute, solo: !!m.solo };
+    if (m.has){
+      try {
+        const d = await restoreData(await DB.get(dKey(sid, m.id)));
+        if (d){
+          sl.raw = d.raw; sl.dur = d.dur; sl.max = d.max; sl.src = d.src; if (!sl.name) sl.name = d.name || '';
+          if (m.trim == null){ sl.trim = autoTrim(sl.raw); sl.vol = 1; }
+        }
+      } catch (e) {}
+    }
+    out.push(sl);
+  }
+  return out;
+}
+async function loadSession(sid){
+  resetRuntime();
+  curSid = sid; sessions.current = sid;
+  const st = await DB.get(stKey(sid)).catch(() => null);
+  nextId = 1;
+  initParts();
+  sequence = [{ p: 'A', n: 1 }]; playMode = 'part';
+  if (!st){ syncFx(); return; }
+  const psrc = (st.v >= 4 && st.parts) ? st.parts
+    : { A: { A: st.A, B: st.B, loopOn: st.loopOn, locked: st.locked, slots: st.slots || [] } };
+  let maxId = (st.nextId || 1) - 1;
+  for (const k of PARTS) for (const m of ((psrc[k] && psrc[k].slots) || [])) maxId = Math.max(maxId, m.id);
+  nextId = maxId + 1;
+  for (const k of PARTS){
+    const ps = psrc[k];
+    const p = blankPart();
+    if (ps){
+      const list = await loadSlotsFrom(sid, ps.slots || []);
+      if (list.length) p.slots = list;
+      p.A = ps.A != null ? ps.A : null; p.B = ps.B != null ? ps.B : null;
+      p.loopOn = ps.loopOn !== false; p.locked = !!ps.locked;
+      p.paused = p.A != null ? p.A : 0;
+    }
+    p.tempoPct = fxVal(ps && ps.tempoPct, st.tempoPct, -50, 50);
+    p.semi = fxVal(ps && ps.semi, st.semi, -7, 7);
+    parts[k] = p;
+  }
+  if (Array.isArray(st.sequence) && st.sequence.length) sequence = st.sequence.map((x) => ({ p: PARTS.includes(x.p) ? x.p : 'A', n: clamp((x.n | 0) || 1, 1, 32) }));
+  else if (st.v >= 4) sequence = [];
+  playMode = st.playMode === 'seq' ? 'seq' : 'part';
+  applyPart(PARTS.includes(st.curPart) ? st.curPart : 'A');
+  syncFx();
+  clampMarks();
+}
+
+function afterLoad(){
+  updateCanvasHeight();
+  view = { s: 0, e: timelineDur() };
+  buildPeaks();
+  ui();
+  renderSessions();
+  doRender();
+}
+const stSlotIds = (st) => {
+  const ids = [];
+  if (!st) return ids;
+  if (st.parts) for (const k of PARTS) for (const m of ((st.parts[k] && st.parts[k].slots) || [])) ids.push(m.id);
+  if (st.slots) for (const m of st.slots) ids.push(m.id);
+  return ids;
+};
+
+async function switchSession(sid){
+  if (rec || sid === curSid) return;
+  clearTimeout(saveTimer); await writeState();
+  restoring = true;
+  say('Otwieram sesję…', false, true);
+  await loadSession(sid);
+  restoring = false;
+  await writeState();
+  afterLoad();
+  say('Otwarta sesja „' + (sessMeta(sid) || {}).name + '”.');
+}
+
+async function newSession(name){
+  if (rec) return;
+  clearTimeout(saveTimer); await writeState();
+  const sid = sessions.nextSid++;
+  const now = Date.now();
+  sessions.list.push({ sid, name: name || defaultSessName(), created: now, updated: now, tracks: 0 });
+  restoring = true;
+  resetRuntime();
+  curSid = sid; sessions.current = sid;
+  nextId = 1; initParts(); sequence = [{ p: 'A', n: 1 }]; playMode = 'part'; syncFx();
+  restoring = false;
+  await writeState();
+  afterLoad();
+  return sid;
+}
+
+async function copySession(){
+  if (rec || curSid == null) return;
+  clearTimeout(saveTimer); await writeState();
+  const from = curSid, m = sessMeta(from);
+  const sid = sessions.nextSid++;
+  const now = Date.now();
+  const st = stateObj();
+  await DB.put(stKey(sid), st);
+  const all = allSlots().filter(hasContent);
+  for (const s of all) await DB.put(dKey(sid, s.id), slotSrc(s));
+  sessions.list.push({ sid, name: (m ? m.name : 'Sesja') + ' (kopia)', created: now, updated: now, tracks: all.length });
+  await saveIndex();
+  await switchSession(sid);
+}
+
+async function deleteSession(sid){
+  const st = await DB.get(stKey(sid)).catch(() => null);
+  for (const id of stSlotIds(st)) await DB.del(dKey(sid, id)).catch(() => {});
+  await DB.del(stKey(sid)).catch(() => {});
+  sessions.list = sessions.list.filter((x) => x.sid !== sid);
+  if (sid === curSid){
+    curSid = null;
+    const next = sessions.list.slice().sort((a, b) => b.updated - a.updated)[0];
+    if (next){ restoring = true; await loadSession(next.sid); restoring = false; await writeState(); afterLoad(); }
+    else await newSession();
+  }
+  await saveIndex();
+  renderSessions();
+  say('Sesja usunięta.');
+}
+
+function renderSessions(){
+  const panel = $('sessPanel');
+  if (panel.hidden) return;
+  const list = sessions.list.slice().sort((a, b) => b.updated - a.updated);
+  $('sessList').innerHTML = list.map((m) => {
+    const d = new Date(m.updated || m.created || Date.now());
+    const date = d.getDate() + '.' + (d.getMonth() + 1) + '.' + d.getFullYear() + ', ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+    const cur = m.sid === curSid;
+    const del = isArmed('sdel', m.sid);
+    return '<div class="sess-row" data-sid="' + m.sid + '">' +
+      '<div class="sess-info"><b>' + esc(m.name) + '</b><small>' + date + ' · ' + tracksWord(m.tracks || 0) + '</small></div>' +
+      (cur ? '<span class="sess-cur">otwarta</span>' : '<button class="btn sm" type="button" data-sact="open">Otwórz</button>') +
+      '<button class="btn sm' + (del ? ' warn' : '') + '" type="button" data-sact="del">' + (del ? 'Na pewno?' : 'Usuń') + '</button>' +
+      '</div>';
+  }).join('');
+}
+function toggleSessPanel(force){
+  const p = $('sessPanel');
+  p.hidden = force != null ? !force : !p.hidden;
+  $('sessBtn').setAttribute('aria-expanded', String(!p.hidden));
+  $('renameRow').hidden = true;
+  renderSessions();
+}
+
+$('sessBtn').addEventListener('click', () => toggleSessPanel());
+$('sessNew').addEventListener('click', async () => { await newSession(); renderSessions(); say('Nowa sesja. Wczytaj albo nagraj pierwszy ślad.'); });
+$('sessCopy').addEventListener('click', () => copySession());
+$('sessRename').addEventListener('click', () => {
+  const row = $('renameRow');
+  row.hidden = !row.hidden;
+  if (!row.hidden){ const m = sessMeta(curSid); $('renameIn').value = m ? m.name : ''; $('renameIn').focus(); $('renameIn').select(); }
+});
+function doRename(){
+  const v = $('renameIn').value.trim();
+  const m = sessMeta(curSid);
+  if (!v || !m) return;
+  m.name = v.slice(0, 60);
+  $('renameRow').hidden = true;
+  saveIndex(); ui(); renderSessions();
+}
+$('renameOk').addEventListener('click', doRename);
+$('renameIn').addEventListener('keydown', (e) => { if (e.key === 'Enter'){ e.preventDefault(); doRename(); } });
+$('sessList').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-sact]');
+  if (!b) return;
+  const sid = +b.closest('.sess-row').dataset.sid;
+  if (b.dataset.sact === 'open') switchSession(sid);
+  else if (b.dataset.sact === 'del'){
+    if (!isArmed('sdel', sid)){ arm('sdel', sid); return; }
+    armed = null; deleteSession(sid);
+  }
+});
+
+/* session file: "LOOPERS1" + uint32 JSON length + JSON + payloads */
+function exportSession(){
+  const m = sessMeta(curSid);
+  const name = m ? m.name : 'Sesja';
+  stashPart();
+  const meta = { format: 'looper-session', version: 2, name, tempoPct, semi, curPart, playMode, sequence, parts: {} };
+  const payloads = [];
+  for (const k of PARTS){
+    const p = parts[k];
+    const pm = { A: p.A, B: p.B, loopOn: p.loopOn !== false, locked: !!p.locked, tempoPct: p.tempoPct || 0, semi: p.semi || 0, tracks: [] };
+    for (const sl of p.slots){
+      if (!hasContent(sl)){ pm.tracks.push({ empty: true, vol: sl.vol }); continue; }
+      const src = slotSrc(sl);
+      const bytes = new Uint8Array(src.data);
+      pm.tracks.push({ name: sl.name, vol: sl.vol, trim: sl.trim || 1, offset: sl.offset, mute: !!sl.mute, solo: !!sl.solo, kind: src.kind, sr: src.sr || null, bytes: bytes.length });
+      payloads.push(bytes);
+    }
+    meta.parts[k] = pm;
+  }
+  const json = new TextEncoder().encode(JSON.stringify(meta));
+  const head = new Uint8Array(12);
+  head.set([76, 79, 79, 80, 69, 82, 83, 49]);
+  new DataView(head.buffer).setUint32(8, json.length, true);
+  shareBlob(new Blob([head, json].concat(payloads), { type: 'application/octet-stream' }), safeName(name) + '.looper', 'application/octet-stream');
+}
+async function importSessionFile(file){
+  if (!file) return;
+  say('Otwieram plik sesji…', false, true);
+  try {
+    const buf = await file.arrayBuffer();
+    const u8 = new Uint8Array(buf);
+    if (String.fromCharCode.apply(null, u8.subarray(0, 8)) !== 'LOOPERS1') throw new Error('to nie jest plik sesji Loopera');
+    const jl = new DataView(buf).getUint32(8, true);
+    const meta = JSON.parse(new TextDecoder().decode(u8.subarray(12, 12 + jl)));
+    let p = 12 + jl;
+    clearTimeout(saveTimer); await writeState();
+    const sid = sessions.nextSid++;
+    const now = Date.now();
+    const srcParts = meta.parts || { A: { A: meta.A, B: meta.B, loopOn: meta.loopOn, locked: meta.locked, tracks: meta.tracks || [] } };
+    const st = { v: 4, nextId: 1, tempoPct: meta.tempoPct || 0, semi: meta.semi || 0, curPart: PARTS.includes(meta.curPart) ? meta.curPart : 'A',
+                 playMode: meta.playMode === 'seq' ? 'seq' : 'part', sequence: Array.isArray(meta.sequence) ? meta.sequence : [{ p: 'A', n: 1 }], parts: {} };
+    let n = 0;
+    for (const k of PARTS){
+      const pm = srcParts[k];
+      const ps = { A: null, B: null, loopOn: true, locked: false, slots: [],
+                   tempoPct: fxVal(pm && pm.tempoPct, meta.tempoPct, -50, 50), semi: fxVal(pm && pm.semi, meta.semi, -7, 7) };
+      if (pm){
+        ps.A = pm.A != null ? pm.A : null; ps.B = pm.B != null ? pm.B : null; ps.loopOn = pm.loopOn !== false; ps.locked = !!pm.locked;
+        for (const t of (pm.tracks || [])){
+          const id = st.nextId++;
+          if (t.empty){ ps.slots.push({ id, name: '', vol: t.vol != null ? t.vol : 1, offset: 0, has: false }); continue; }
+          const data = buf.slice(p, p + t.bytes); p += t.bytes;
+          const src = t.kind === 'file' ? { kind: 'file', name: t.name, data } : { kind: 'pcm', sr: t.sr, name: t.name, data };
+          await DB.put(dKey(sid, id), src);
+          ps.slots.push({ id, name: t.name || '', vol: t.vol != null ? t.vol : 1, trim: t.trim != null ? t.trim : null, offset: t.offset || 0, has: true, mute: !!t.mute, solo: !!t.solo });
+          n++;
+        }
+      }
+      if (!ps.slots.length) ps.slots.push({ id: st.nextId++, name: '', vol: 1, offset: 0, has: false });
+      st.parts[k] = ps;
+    }
+    await DB.put(stKey(sid), st);
+    let name = meta.name || file.name.replace(/\.[^.]+$/, '');
+    if (sessions.list.some((x) => x.name === name)) name += ' (z pliku)';
+    sessions.list.push({ sid, name, created: now, updated: now, tracks: n });
+    await saveIndex();
+    await switchSession(sid);
+    say('Otwarta sesja z pliku: „' + name + '”.');
+  } catch (err) {
+    say('Nie udało się otworzyć pliku sesji: ' + (err && err.message ? err.message : err) + '.', true);
+  }
+}
+$('sessExport').addEventListener('click', () => { if (!rec) exportSession(); });
+$('sessImport').addEventListener('click', () => { if (!rec) $('sessFileIn').click(); });
+$('sessFileIn').addEventListener('change', (e) => { const f = e.target.files && e.target.files[0]; e.target.value = ''; openLooperFile(f); });
+
+async function initSessions(){
+  let idx = await DB.get('sessions').catch(() => null);
+  if (idx && idx.list && idx.list.length){ sessions = idx; return; }
+  let st2 = await DB.get('state2').catch(() => null);
+  if (!st2) st2 = await migrateV1();
+  sessions = { current: 1, nextSid: 2, list: [] };
+  const now = Date.now();
+  if (st2 && st2.slots && st2.slots.some((x) => x.has)){
+    for (const m of st2.slots){
+      if (!m.has) continue;
+      const d = await DB.get('data-' + m.id).catch(() => null);
+      if (d) await DB.put(dKey(1, m.id), d);
+      await DB.del('data-' + m.id).catch(() => {});
+    }
+    await DB.put(stKey(1), Object.assign({}, st2, { v: 3, locked: false }));
+    sessions.list.push({ sid: 1, name: 'Moja sesja', created: now, updated: now, tracks: st2.slots.filter((x) => x.has).length });
+  } else {
+    sessions.list.push({ sid: 1, name: defaultSessName(), created: now, updated: now, tracks: 0 });
+  }
+  await DB.del('state2').catch(() => {});
+  await saveIndex();
+}
+async function migrateV1(){
+  const t0s = await DB.get('track0').catch(() => null), t1s = await DB.get('track1').catch(() => null);
+  if (!t0s && !t1s) return null;
+  const st = await DB.get('state').catch(() => null) || {};
+  const meta = [];
+  const list = [t0s, t1s];
+  let id = 1;
+  for (let k = 0; k < 2; k++){
+    if (!list[k]) continue;
+    await DB.put('data-' + id, list[k]);
+    meta.push({ id, name: list[k].name || '', vol: st.vols && st.vols[k] != null ? st.vols[k] : 1, offset: k === 1 ? (st.offset || 0) : 0, has: true });
+    id++;
+  }
+  await Promise.all(['track0', 'track1', 'state'].map((k) => DB.del(k).catch(() => {})));
+  return { v: 2, nextId: id, tempoPct: st.tempoPct || 0, semi: st.semi || 0, A: st.A != null ? st.A : null, B: st.B != null ? st.B : null, loopOn: st.loopOn !== false, slots: meta };
+}
+
+/* ---------- recording ---------- */
+function latencyEstimate(stream){
+  const c = getCtx();
+  const out = (typeof c.outputLatency === 'number' && c.outputLatency > 0) ? c.outputLatency : (c.baseLatency || 0) + 0.005;
+  let inp = 0;
+  try { const s = stream.getAudioTracks()[0].getSettings(); if (typeof s.latency === 'number') inp = s.latency; } catch (e) {}
+  if (!inp) inp = 0.005;
+  return out + inp;
+}
+
+async function startRecording(id){
+  const target = slotById(id);
+  if (!target) return;
+  if (seqPlaying) pauseSeq();
+  const others = content().filter((s) => s.id !== id);
+  const free = others.length === 0;
+  if (!free && (renderDirty || !R)){ say('Chwila, przygotowuję podkład… Spróbuj za moment.'); return; }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.AudioWorkletNode){
+    say('Ta przeglądarka nie pozwala tutaj nagrywać.', true); return;
+  }
+  recStarting = true; ui();
+  const c = getCtx();
+  setSession('play-and-record');
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+  } catch (e) {
+    recStarting = false; setSession('playback'); ui();
+    say('Brak dostępu do mikrofonu. Zezwól na mikrofon (Ustawienia → Safari → Mikrofon) i spróbuj ponownie.', true);
+    return;
+  }
+  try {
+    if (!workletLoaded){ await c.audioWorklet.addModule('rec-worklet.js'); workletLoaded = true; }
+    if (c.state !== 'running') await c.resume();
+  } catch (e) {
+    recStarting = false; stream.getTracks().forEach((t) => t.stop()); setSession('playback'); ui();
+    say('Nie udało się uruchomić nagrywania w tej przeglądarce.', true);
+    return;
+  }
+  const srcNode = c.createMediaStreamSource(stream);
+  const node = new AudioWorkletNode(c, 'rec-proc', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1] });
+  const sink = c.createGain(); sink.gain.value = 0;
+  srcNode.connect(node); node.connect(sink); sink.connect(c.destination);
+  const chunks = [];
+  let tauPlay = 0, stopAt = null;
+  if (!free){
+    const D = timelineDur();
+    const tauStart = loopActive() ? A : (pos() >= D - 0.05 ? 0 : pos());
+    tauPlay = Math.max(0, tauStart - preroll);
+    stopAt = loopActive() ? Math.min(D, B + 0.5) : null;
+  }
+  if (playing) pause();
+  const when = c.currentTime + (free ? 0.05 : 0.3);
+  const T = free ? 1 + tempoPct / 100 : R.T;
+  rec = { id, free, stream, srcNode, node, sink, chunks, when, tauPlay, T, P: Math.pow(2, semi / 12),
+          L: free ? 0 : latencyEstimate(stream), stopAt, stopping: false, stopTimer: 0 };
+  node.port.onmessage = (e) => {
+    if (e.data && e.data.data) chunks.push(e.data);
+    if (e.data && e.data.done) finishRecording();
+  };
+  node.port.postMessage('start');
+  recStarting = false;
+  document.body.classList.add('recording');
+  keepAwake(true);
+  say(free ? 'Nagrywam… Stuknij Stop, żeby zakończyć.' : 'Nagrywam do śladu ' + (slots.indexOf(target) + 1) + '… Stuknij Stop, żeby zakończyć.', false, true);
+  if (!free) startAt(tauPlay, { noLoop: true, when, muteId: id });
+  else { ui(); kick(); }
+}
+
+function stopRecording(){
+  if (!rec || rec.stopping) return;
+  rec.stopping = true;
+  const lab = document.querySelector('.track[data-id="' + rec.id + '"] .rec-label');
+  if (lab) lab.textContent = 'Kończę…';
+  try { rec.node.port.postMessage('stop'); } catch (e) { finishRecording(); return; }
+  rec.stopTimer = setTimeout(() => { if (rec) finishRecording(); }, 1500);
+}
+
+async function convertTake(raw, T, P){
+  const sr = SR(), Pp = 1 / P;
+  let y = raw, tk = performance.now();
+  if (P !== 1){
+    y = new Float32Array(resampleLen(raw.length, Pp));
+    for (const f of resampleGen(raw, Pp, y)){ if (performance.now() - tk > 40){ await nextTick(); tk = performance.now(); } }
+  }
+  const out = new Float32Array(Math.max(1, Math.round(raw.length * T)));
+  for (const f of wsolaGen([y], [0], y.length, T / P, sr, [out])){
+    if (performance.now() - tk > 40){ setBusy(f, 'Dopasowuję nagranie do tempa…'); await nextTick(); tk = performance.now(); }
+  }
+  setBusy(null);
+  return out;
+}
+
+async function finishRecording(){
+  const r = rec;
+  if (!r) return;
+  rec = null;
+  clearTimeout(r.stopTimer);
+  r.node.port.onmessage = null;
+  try { r.srcNode.disconnect(); r.node.disconnect(); r.sink.disconnect(); } catch (e) {}
+  r.stream.getTracks().forEach((t) => t.stop());
+  setSession('playback');
+  document.body.classList.remove('recording');
+  if (playing) pause();
+  keepAwake(false);
+  const s = slotById(r.id);
+  if (!s){ ui(); return; }
+  if (!r.chunks.length){ ui(); say('Nic się nie nagrało. Sprawdź, czy aplikacja ma dostęp do mikrofonu.', true); return; }
+  const sr = SR();
+  let F0 = Infinity, F1 = 0;
+  for (const ch of r.chunks){ F0 = Math.min(F0, ch.frame); F1 = Math.max(F1, ch.frame + ch.data.length); }
+  let raw = new Float32Array(F1 - F0);
+  for (const ch of r.chunks) raw.set(ch.data, ch.frame - F0);
+  if (r.free){
+    const skip = Math.max(0, Math.round((r.when - F0 / sr) * sr));
+    if (skip > 0 && skip < raw.length - sr * 0.1) raw = raw.slice(skip);
+  }
+  const tau0 = r.free ? 0 : r.tauPlay + (F0 / sr - r.when - r.L) * r.T + (learnMs / 1000) * r.T;
+  let take = raw;
+  if (r.T !== 1 || r.P !== 1){
+    try { take = await convertTake(raw, r.T, r.P); }
+    catch (e) { say('Brakuje pamięci, żeby dopasować nagranie do tempa. Spróbuj nagrywać przy tempie bez zmian.', true); ui(); return; }
+  }
+  const wasEmpty = !content().length;
+  s.raw = take; s.dur = take.length / sr; s.name = 'Nagranie ' + hhmm(); s.max = absMax(take); s.src = { kind: 'pcm' }; s.trim = autoTrim(take);
+  s.offset = r.free ? 0 : Math.max(-s.dur + 0.05, tau0);
+  lastRec = r.free ? null : { id: s.id, T: r.T, orig: s.offset, base: learnMs };
+  if (R && R.bufs[s.id]) delete R.bufs[s.id];
+  if (wasEmpty){ A = null; B = null; paused = 0; zoomed = false; }
+  clampMarks();
+  if (zoomed) fitZoom(); else resetView();
+  ui();
+  scheduleRender(0);
+  saveSlotData(s);
+  say('Gotowe: ' + s.name.toLowerCase() + ' (' + secs(s.dur) + ').' + (r.free ? '' : ' Jeśli rozjeżdża się z podkładem, popraw je strzałkami ‹ › przy śladzie.'));
+}
+
+/* ---------- export ---------- */
+function wavBlob(x, sr){
+  const n = x.length, buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf);
+  const w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+  w(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); w(8, 'WAVE'); w(12, 'fmt ');
+  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, sr, true); v.setUint32(28, sr * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+  w(36, 'data'); v.setUint32(40, n * 2, true);
+  new Int16Array(buf, 44, n).set(toInt16(x));
+  return new Blob([buf], { type: 'audio/wav' });
+}
+function safeName(s){ return s.replace(/[\\/:*?"<>|]+/g, '-').trim() || 'nagranie'; }
+async function shareBlob(blob, filename, type){
+  let file = null;
+  try { file = new File([blob], filename, { type }); } catch (e) {}
+  if (file && navigator.canShare && navigator.canShare({ files: [file] })){
+    try { await navigator.share({ files: [file] }); return; }
+    catch (e) { if (e && e.name === 'AbortError') return; }
+  }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  say('Plik „' + filename + '” jest w Pobranych.');
+}
+
+function bounceUI(state){
+  $('bounceSheet').hidden = state === 'closed';
+  $('bounceChoice').hidden = state !== 'choose';
+  $('bounceProg').hidden = state !== 'busy';
+  $('bounceDone').hidden = state !== 'done';
+  $('bounceCancel').hidden = state === 'done';
+  $('bounceNote').hidden = state === 'done';
+  $('bounceAll').disabled = !R || !content().length;
+  $('bounceLoop').disabled = !R || !loopActive();
+  $('bounceSeq').disabled = !sequence.length;
+  $('bounceTitle').textContent = state === 'busy' ? 'Zgrywam do MP3…' : state === 'done' ? 'Gotowe: ' + bounceName : 'Co zgrać do MP3?';
+}
+function openBounce(){
+  if (rec) return;
+  if (!PARTS.some(partHas)){ say('Najpierw wczytaj albo nagraj ślad.'); return; }
+  if (content().length && (!R || renderDirty)){ say('Chwila, przeliczam ślady… Spróbuj za moment.'); return; }
+  bounceUI('choose');
+}
+function cancelBounce(){
+  if (bounceWorker){ bounceWorker.terminate(); bounceWorker = null; }
+  bounceBlob = null; bounceUI('closed');
+}
+async function renderMix(a, n){
+  const sr = R.sr;
+  const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+  if (OAC){
+    try {
+      const oc = new OAC(1, n, sr);
+      const lim = setupLimiter(oc.createDynamicsCompressor());
+      lim.connect(oc.destination);
+      for (const s of playingSlots()){
+        const v = effGain(s);
+        if (!v) continue;
+        const src = oc.createBufferSource();
+        src.buffer = R.bufs[s.id];
+        const gn = oc.createGain(); gn.gain.value = v;
+        src.connect(gn); gn.connect(lim);
+        src.start(0, a / sr, n / sr);
+      }
+      const rendered = await new Promise((res, rej) => {
+        oc.oncomplete = (e) => res(e.renderedBuffer);
+        const p = oc.startRendering();
+        if (p && p.then) p.then(res, rej);
+      });
+      return new Float32Array(rendered.getChannelData(0));
+    } catch (e) {}
+  }
+  const out = new Float32Array(n);
+  for (const s of playingSlots()){
+    const d = R.bufs[s.id].getChannelData(0), v = effGain(s);
+    if (!v) continue;
+    for (let i = 0; i < n; i++) out[i] += d[a + i] * v;
+  }
+  return out;
+}
+async function renderSeqMix(){
+  const ok = await prepareSeq();
+  if (!ok) return null;
+  const pl = seqPlan();
+  if (!pl.plan.length) throw new Error('sekwencja jest pusta albo jej części nie mają nagrań');
+  if (pl.total > 20 * 60) throw new Error('sekwencja trwa ponad 20 minut');
+  const sr = SR(), n = Math.max(1, Math.round(pl.total * sr));
+  const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+  if (!OAC) throw new Error('ta przeglądarka nie obsługuje zgrywania sekwencji');
+  const oc = new OAC(1, n, sr);
+  const lim = setupLimiter(oc.createDynamicsCompressor());
+  lim.connect(oc.destination);
+  for (const st of pl.plan){
+    const part = parts[st.p];
+    for (const s of part.slots){
+      if (!hasContent(s) || !part.R || !part.R.bufs[s.id]) continue;
+      const v = effGainIn(part.slots, s);
+      if (!v) continue;
+      const gn = oc.createGain(); gn.gain.value = v; gn.connect(lim);
+      for (let r = 0; r < st.n; r++){
+        const t = st.gstart + r * st.len;
+        const src = oc.createBufferSource(); src.buffer = part.R.bufs[s.id];
+        const env = oc.createGain();
+        env.gain.setValueAtTime(0, t); env.gain.linearRampToValueAtTime(1, t + 0.002);
+        env.gain.setValueAtTime(1, t + Math.max(0.002, st.len - 0.002)); env.gain.linearRampToValueAtTime(0, t + st.len);
+        src.connect(env); env.connect(gn);
+        src.start(t, st.a, st.len);
+      }
+    }
+  }
+  const rendered = await new Promise((res, rej) => {
+    oc.oncomplete = (e) => res(e.renderedBuffer);
+    const p = oc.startRendering();
+    if (p && p.then) p.then(res, rej);
+  });
+  return new Float32Array(rendered.getChannelData(0));
+}
+async function doBounce(kind){
+  const onlyLoop = kind === 'loop';
+  let out, sr;
+  bounceUI('busy');
+  $('bounceBar').style.width = '0%'; $('bounceTxt').textContent = '0%';
+  if (kind === 'seq'){
+    try { out = await renderSeqMix(); }
+    catch (e) { bounceUI('closed'); say('Nie udało się zgrać sekwencji: ' + (e && e.message ? e.message : e) + '.', true); return; }
+    if (!out){ bounceUI('closed'); return; }
+    sr = SR();
+  } else {
+    if (!R){ bounceUI('closed'); return; }
+    sr = R.sr;
+    const len = R.len;
+    let a = 0, b = len;
+    if (onlyLoop && loopActive()){ a = Math.max(0, Math.round(A / R.T * sr)); b = Math.min(len, Math.round(B / R.T * sr)); }
+    out = await renderMix(a, Math.max(1, b - a));
+  }
+  let m = 0; for (let i = 0; i < out.length; i++){ const q = Math.abs(out[i]); if (q > m) m = q; }
+  if (m > 0.99){ const k = 0.99 / m; for (let i = 0; i < out.length; i++) out[i] *= k; }
+  const sm = sessMeta(curSid);
+  const nameParts = [sm ? sm.name : 'Looper ' + hhmm()];
+  if (kind === 'seq') nameParts.push('sekwencja');
+  else nameParts.push('część ' + curPart + (onlyLoop && loopActive() ? ' pętla' : ''));
+  if (kind !== 'seq' && tempoPct) nameParts.push('tempo ' + (tempoPct > 0 ? '+' : '') + tempoPct + '%');
+  if (kind !== 'seq' && semi) nameParts.push((semi > 0 ? '+' : '') + semi + ' pt');
+  bounceName = safeName(nameParts.join(' ')) + '.mp3';
+  let worker;
+  try { worker = new Worker('mp3-worker.js'); } catch (e) { say('Ta przeglądarka nie pozwala tu zgrać MP3.', true); bounceUI('closed'); return; }
+  bounceWorker = worker;
+  worker.onmessage = (e) => {
+    const d = e.data || {};
+    if (d.progress != null){ const p = Math.round(d.progress * 100); $('bounceBar').style.width = p + '%'; $('bounceTxt').textContent = p + '%'; }
+    if (d.error){ worker.terminate(); bounceWorker = null; bounceUI('closed'); say('Nie udało się zgrać MP3: ' + d.error, true); }
+    if (d.done){
+      worker.terminate(); bounceWorker = null;
+      bounceBlob = d.blob;
+      bounceUI('done');
+      $('bounceTitle').textContent = 'Gotowe: ' + bounceName + ' (' + (bounceBlob.size / 1e6).toFixed(1).replace('.', ',') + ' MB)';
+    }
+  };
+  worker.onerror = () => { worker.terminate(); bounceWorker = null; bounceUI('closed'); say('Nie udało się zgrać MP3.', true); };
+  worker.postMessage({ pcm: out, sr, kbps: 160 }, [out.buffer]);
+}
+
+/* ---------- pointer on waveform ---------- */
+canvas.addEventListener('pointerdown', (e) => {
+  if (!content().length || rec) return;
+  if (locked){ lockedMsg(); return; }
+  e.preventDefault();
+  try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
+  const r = canvas.getBoundingClientRect();
+  const x = e.clientX - r.left;
+  if (shiftId != null){
+    const s = slotById(shiftId);
+    if (hasContent(s)){ drag = { mode: 'shift', id: s.id, x0: x, off0: s.offset, w: r.width, left: r.left, span: view.e - view.s }; return; }
+  }
+  const hit = e.pointerType === 'mouse' ? 10 : 24;
+  const xa = A != null ? tToX(A, r.width) : null;
+  const xb = B != null ? tToX(B, r.width) : null;
+  const dA = xa != null ? Math.abs(xa - x) : Infinity;
+  const dB = xb != null ? Math.abs(xb - x) : Infinity;
+  let mode = 'pending';
+  if (dA <= hit && dB <= hit) mode = x >= (xa + xb) / 2 ? 'B' : 'A';
+  else if (dA <= hit) mode = 'A';
+  else if (dB <= hit) mode = 'B';
+  drag = { mode, x0: x, t0: xToT(x, r.width), w: r.width, left: r.left };
+  if (mode !== 'pending'){ tune = mode; ui(); }
+});
+canvas.addEventListener('pointermove', (e) => {
+  if (!drag) return;
+  const x = e.clientX - drag.left;
+  if (drag.mode === 'shift'){
+    const s = slotById(drag.id);
+    if (!s) return;
+    s.offset = clampOffset(s, drag.off0 + (x - drag.x0) / drag.w * drag.span);
+    buildPeaks();
+    const o = document.querySelector('.track[data-id="' + s.id + '"] .off-out');
+    if (o) o.textContent = signed(s.offset - refOffset(), 3) + ' s';
+    draw();
+    return;
+  }
+  const t = xToT(x, drag.w);
+  const D = timelineDur();
+  if (drag.mode === 'pending' && Math.abs(x - drag.x0) > 8) drag.mode = 'select';
+  if (drag.mode === 'A') A = Math.min(t, B != null ? B - MIN_LOOP : D - MIN_LOOP);
+  else if (drag.mode === 'B') B = Math.max(t, (A != null ? A : 0) + MIN_LOOP);
+  else if (drag.mode === 'select'){ A = Math.min(drag.t0, t); B = Math.max(drag.t0, t); loopOn = true; tune = 'A'; }
+  else return;
+  ui();
+});
+function endDrag(cancel){
+  const d = drag; drag = null;
+  if (!d) return;
+  if (d.mode === 'shift'){ const s = slotById(d.id); if (s) setOffset(s.id, s.offset, 0); return; }
+  if (d.mode === 'pending'){
+    if (cancel) return;
+    if (playing) startAt(d.t0); else { paused = d.t0; ui(); }
+    return;
+  }
+  if (d.mode === 'select'){
+    if (B - A < MIN_LOOP) B = Math.min(timelineDur(), A + MIN_LOOP);
+    afterMarkerChange('A');
+    say('Pętla ' + fmt(A) + ' – ' + fmt(B) + '. Dostrój ją przyciskami ±.');
+    return;
+  }
+  afterMarkerChange(d.mode);
+}
+canvas.addEventListener('pointerup', () => endDrag(false));
+canvas.addEventListener('pointercancel', () => endDrag(true));
+
+/* ---------- controls ---------- */
+$('play').addEventListener('click', togglePlay);
+$('lock').addEventListener('click', toggleLock);
+$('toStart').addEventListener('click', toStart);
+document.querySelectorAll('[data-skip]').forEach((b) => b.addEventListener('click', () => skip(parseFloat(b.dataset.skip))));
+$('loop').addEventListener('click', toggleLoop);
+$('clearLoop').addEventListener('click', clearLoop);
+$('levelAll').addEventListener('click', () => {
+  const list = content();
+  if (!list.length){ say('Najpierw wczytaj albo nagraj ślad.'); return; }
+  for (const s of list){ s.trim = autoTrim(s.raw); s.vol = 1; }
+  applyGains(); buildPeaks(); lastMixSig = ''; ui(); scheduleSave(true);
+  say('Poziomy wyrównane, suwaki ustawione na 0 dB.');
+});
+$('tuneA').addEventListener('click', () => { tune = 'A'; ui(); });
+$('tuneB').addEventListener('click', () => { tune = 'B'; ui(); });
+document.querySelectorAll('[data-d]').forEach((b) => b.addEventListener('click', () => nudge(parseFloat(b.dataset.d))));
+$('addTrack').addEventListener('click', addTrack);
+$('bounce').addEventListener('click', openBounce);
+$('bounceAll').addEventListener('click', () => doBounce('part'));
+$('bounceLoop').addEventListener('click', () => doBounce('loop'));
+$('bounceSeq').addEventListener('click', () => doBounce('seq'));
+$('bounceCancel').addEventListener('click', cancelBounce);
+$('bounceClose').addEventListener('click', cancelBounce);
+$('bounceShare').addEventListener('click', () => { if (bounceBlob) shareBlob(bounceBlob, bounceName, 'audio/mpeg'); });
+$('learnReset').addEventListener('click', () => { learnMs = 0; lastRec = null; try { localStorage.setItem('looper.learnMs', '0'); } catch (e) {} setLearnUI(); say('Zapamiętana poprawka wyzerowana.'); });
+document.querySelectorAll('[data-pre]').forEach((b) => b.addEventListener('click', () => setPreroll(parseFloat(b.dataset.pre))));
+$('wipe').addEventListener('click', () => {
+  const b = $('wipe');
+  if (b.dataset.armed !== '1'){ b.dataset.armed = '1'; b.textContent = 'Na pewno?'; setTimeout(() => { b.dataset.armed = ''; b.textContent = 'Wyczyść'; }, 4000); return; }
+  b.dataset.armed = ''; b.textContent = 'Wyczyść';
+  resetRuntime();
+  for (const s of allSlots()) if (curSid != null) DB.del(dKey(curSid, s.id)).catch(() => {});
+  initParts(); sequence = [{ p: 'A', n: 1 }]; playMode = 'part';
+  syncFx();
+  lastSig = ''; lastMixSig = ''; lastDotSig = '';
+  updateCanvasHeight(); resetView(); ui(); scheduleSave(true);
+  say('Sesja wyczyszczona.');
+});
+
+function fxChanged(delay){ scheduleRender(delay); }
+const tempoEl = $('tempo'), semiEl = $('semi');
+tempoEl.addEventListener('input', () => setTempo(+tempoEl.value));
+tempoEl.addEventListener('change', () => { setTempo(+tempoEl.value); fxChanged(120); });
+semiEl.addEventListener('input', () => setSemi(+semiEl.value));
+semiEl.addEventListener('change', () => { setSemi(+semiEl.value); fxChanged(120); });
+$('tempoMinus').addEventListener('click', () => { setTempo(tempoPct - 1); fxChanged(450); });
+$('tempoPlus').addEventListener('click', () => { setTempo(tempoPct + 1); fxChanged(450); });
+$('tempoZero').addEventListener('click', () => { if (tempoPct !== 0){ setTempo(0); fxChanged(0); } });
+$('semiMinus').addEventListener('click', () => { setSemi(semi - 1); fxChanged(450); });
+$('semiPlus').addEventListener('click', () => { setSemi(semi + 1); fxChanged(450); });
+$('semiZero').addEventListener('click', () => { if (semi !== 0){ setSemi(0); fxChanged(0); } });
+
+/* ---------- loading files (audio or video) ---------- */
+function mixdown(buf){
+  const n = buf.numberOfChannels;
+  if (n === 1) return buf.getChannelData(0);
+  const out = new Float32Array(buf.length);
+  for (let c = 0; c < n; c++){ const d = buf.getChannelData(c); for (let i = 0; i < d.length; i++) out[i] += d[i] / n; }
+  return out;
+}
+function absMax(x){
+  let m = 0;
+  for (let i = 0; i < x.length; i += 4){ const v = x[i] < 0 ? -x[i] : x[i]; if (v > m) m = v; }
+  return m;
+}
+function decode(ab){
+  const c = getCtx();
+  return new Promise((res, rej) => {
+    const p = c.decodeAudioData(ab, res, rej);
+    if (p && p.then) p.then(res, rej);
+  });
+}
+
+async function loadInto(id, file){
+  const s = slotById(id);
+  if (!file || !s) return;
+  const isVideo = /^video\//.test(file.type) || /\.(mov|mp4|m4v|3gp)$/i.test(file.name);
+  say(isVideo ? 'Wyciągam dźwięk z filmu…' : 'Wczytuję „' + file.name + '”…', false, true);
+  let raw, src;
+  const name = file.name.replace(/\.[^.]+$/, '');
+  try {
+    const ab = await file.arrayBuffer();
+    if (isVideo){
+      let decoded = null, firstErr = null;
+      try { decoded = await decode(mp4AacToAdts(ab)); } catch (e) { firstErr = e; }
+      if (!decoded){
+        try { decoded = await decode(ab.slice(0)); }
+        catch (e) { throw (firstErr && /no audio track/.test(firstErr.message)) ? new Error('noaudio') : e; }
+      }
+      raw = mixdown(decoded);
+      src = { kind: 'pcm' };
+    } else {
+      const keep = ab.slice(0);
+      raw = mixdown(await decode(ab));
+      src = { kind: 'file', name, data: keep };
+    }
+  } catch (err) {
+    if (err && err.message === 'noaudio') say('Ten film nie ma ścieżki dźwiękowej.', true);
+    else say('Nie udało się odczytać pliku „' + file.name + '”. Spróbuj nagrania m4a, mp3, wav albo filmu z galerii.', true);
+    return;
+  }
+  if (playing) pause();
+  const onlyOne = content().filter((x) => x.id !== id).length === 0;
+  s.raw = raw; s.dur = raw.length / SR(); s.name = name; s.max = absMax(raw); s.offset = onlyOne ? 0 : refOffset();
+  s.src = src; s.trim = autoTrim(raw);
+  if (lastRec && lastRec.id === id) lastRec = null;
+  if (R && R.bufs[id]) delete R.bufs[id];
+  if (onlyOne){ A = null; B = null; paused = 0; zoomed = false; loopOn = true; tune = 'A'; }
+  clampMarks();
+  if (zoomed) fitZoom(); else resetView();
+  ui();
+  scheduleRender(0);
+  saveSlotData(s);
+  if (isVideo && s.max < 0.002) say('Dźwięk z filmu jest prawie cichy. Niektóre aplikacje (np. Apple Music) wyciszają nagrywanie ekranu.', true);
+  else say('Gotowe. Przeciągnij palcem po przebiegu, żeby zaznaczyć pętlę.');
+}
+
+$('fileIn').addEventListener('change', (e) => {
+  const f = e.target.files && e.target.files[0];
+  const id = pendingLoadId; pendingLoadId = null;
+  if (id != null) loadInto(id, f);
+  e.target.value = '';
+});
+
+const tracksCard = $('tracks');
+['dragenter', 'dragover'].forEach((ev) => document.addEventListener(ev, (e) => { e.preventDefault(); tracksCard.classList.add('drop'); }));
+document.addEventListener('dragleave', (e) => { if (e.target === document.documentElement || e.target === document.body) tracksCard.classList.remove('drop'); });
+document.addEventListener('drop', (e) => {
+  e.preventDefault();
+  tracksCard.classList.remove('drop');
+  const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  if (!f || rec) return;
+  if (/\.looper$/i.test(f.name)){ openLooperFile(f); return; }
+  let s = slots.find((x) => !hasContent(x));
+  if (!s && slots.length < MAX_TRACKS){ s = newSlot(); slots.push(s); updateCanvasHeight(); }
+  if (!s) s = slots[0];
+  loadInto(s.id, f);
+});
+
+/* ---------- keyboard (desktop) ---------- */
+document.addEventListener('keydown', (e) => {
+  if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const k = e.key;
+  if (rec){ if (k === ' '){ e.preventDefault(); stopRecording(); } return; }
+  if (k === ' '){ e.preventDefault(); togglePlay(); }
+  else if (k === 'a' || k === 'A'){ setA(); }
+  else if (k === 'b' || k === 'B'){ setB(); }
+  else if (k === 'l' || k === 'L'){ toggleLock(); }
+  else if (k === 'Home'){ e.preventDefault(); toStart(); }
+  else if (k === ',' ){ skip(-5); }
+  else if (k === '.'){ skip(5); }
+  else if (k === 'ArrowLeft'){ e.preventDefault(); nudge(e.shiftKey ? -0.1 : -0.01); }
+  else if (k === 'ArrowRight'){ e.preventDefault(); nudge(e.shiftKey ? 0.1 : 0.01); }
+});
+
+/* ---------- housekeeping ---------- */
+let swReg = null;
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden){
+    if (Date.now() - hiddenAt > 400) ctxStale = true;
+    if (swReg){ try { swReg.update(); } catch (e) {} }
+    return;
+  }
+  hiddenAt = Date.now();
+  if (rec) stopRecording();
+  else if (seqPlaying) pauseSeq();
+  else if (playing) pause();
+  clearTimeout(saveTimer); if (!restoring) writeState();
+});
+window.addEventListener('pageshow', (e) => { if (e.persisted) ctxStale = true; });
+if (window.ResizeObserver) new ResizeObserver(resize).observe(canvas);
+window.addEventListener('resize', () => updateCanvasHeight());
+try { window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', draw); } catch (e) {}
+const netUI = () => { $('net').hidden = navigator.onLine !== false; };
+window.addEventListener('online', netUI); window.addEventListener('offline', netUI); netUI();
+
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
+  const hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register('sw.js').then((reg) => { swReg = reg; try { reg.update(); } catch (e) {} }).catch(() => {});
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadController) $('update').hidden = false; });
+  $('reload').addEventListener('click', () => location.reload());
+}
+try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch (e) {}
+
+/* ---------- start ---------- */
+try { getCtx(); } catch (e) { say('Ta przeglądarka nie obsługuje odtwarzania dźwięku przez Web Audio.', true); }
+updateFx(); setLearnUI(); setPreroll(preroll);
+initParts();
+updateCanvasHeight();
+ui();
+setCollapsed(tracksCollapsed);
+setFxCollapsed(fxCollapsed);
+(async () => {
+  try {
+    await initSessions();
+    const sid = sessMeta(sessions.current) ? sessions.current : sessions.list[0].sid;
+    say('Wczytuję sesję…', false, true);
+    await loadSession(sid);
+    say('');
+  } catch (e) {
+    sessions = { current: 1, nextSid: 2, list: [{ sid: 1, name: defaultSessName(), created: Date.now(), updated: Date.now(), tracks: 0 }] };
+    curSid = 1; initParts();
+  }
+  restoring = false;
+  await writeState();
+  afterLoad();
+})();
+})();
+</script>
+</body>
+</html>
