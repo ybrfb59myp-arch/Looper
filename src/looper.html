@@ -77,6 +77,10 @@ input[type="text"]{-webkit-user-select:text;user-select:text;-webkit-touch-callo
 .sess-btn .chev{transition:transform .15s}
 .sess-btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
 .sess-btn:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:6px}
+.menubtn{flex:none;width:44px;min-height:40px;padding:0;border-radius:10px;display:grid;place-items:center}
+.menubtn[aria-expanded="true"]{background:var(--accent-soft);border-color:var(--accent)}
+.menu-panel{gap:0}
+.menu-panel details.fold:first-child{border-top:0;padding-top:0}
 .net{flex:none;font-size:.75rem;font-weight:700;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:3px 9px}
 .sess-list{display:flex;flex-direction:column}
 .sess-row{display:flex;align-items:center;gap:8px;padding:8px 0}
@@ -107,7 +111,12 @@ input[type="text"]{-webkit-user-select:text;user-select:text;-webkit-touch-callo
 .copy-targets{display:flex;gap:6px}
 .copy-targets .btn{min-width:52px;font-weight:800}
 .seq-body{display:flex;flex-direction:column;gap:10px}
-#partsCard.collapsed .seq-body{display:none}
+#partsCard.collapsed .seq-body,#partsCard.collapsed .seq-strip{display:none}
+.seq-row{display:flex;align-items:center;gap:8px}
+.seq-row .seq-strip{flex:1;min-width:0}
+.seq-sum{display:none;flex:1;min-width:0;font-size:.88rem;font-weight:800;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#partsCard.collapsed .seq-sum{display:block}
+@media (max-width:430px){#partsCard .parts-top{gap:6px}#partsCard .part-seg .btn{min-width:40px;padding-left:6px;padding-right:6px}#partsCard .mode-seg .btn{padding:6px 8px}#partsCard #partCopy{min-width:36px;padding:4px 6px}}
 #partsCard.collapsed .collapse-btn svg{transform:rotate(180deg)}
 .seq-label{font-size:.72rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
 .seq-strip{display:flex;gap:8px;overflow-x:auto;padding:8px 2px 4px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
@@ -222,7 +231,10 @@ body.recording .recdot:not(.rec-active){pointer-events:none;opacity:.35}
 .strip.off .fader .fill{background:var(--wave)}
 canvas{display:block;width:100%;height:170px;touch-action:none;cursor:crosshair}
 canvas.shifting{cursor:ew-resize}
-canvas.locked{cursor:default}
+canvas.locked{cursor:default;touch-action:pan-y}
+.now-row{flex:1 1 auto;min-width:0;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.mixbtn{flex:none;width:44px;min-height:34px;padding:0;border-radius:10px;display:grid;place-items:center}
+#card.mix-hidden .mixer{display:none}
 .readout{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
 .now{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:1.6rem;font-weight:700;letter-spacing:-.02em}
 .dur{font-size:.85rem;color:var(--muted);margin-left:6px;font-weight:500;letter-spacing:0}
@@ -241,7 +253,9 @@ canvas.locked{cursor:default}
 
 /* tempo / key */
 .fx-body{display:flex;flex-direction:column;gap:10px}
-#fxCard.collapsed .fx-body{display:none}
+#fxCard.collapsed .fx-body,#loopCard.collapsed .fx-body{display:none}
+#loopCard.collapsed{padding:8px 12px}
+#loopCard.collapsed .collapse-btn svg{transform:rotate(180deg)}
 #fxCard.collapsed{padding:8px 12px}
 #fxCard.collapsed .collapse-btn svg{transform:rotate(180deg)}
 .fx-sum{flex:1;min-width:0;display:flex;align-items:baseline;gap:10px;background:none;border:0;padding:4px 0;font:inherit;color:var(--ink);cursor:pointer;text-align:left;-webkit-tap-highlight-color:transparent}
@@ -318,6 +332,7 @@ body.recording #tracks .trk-name{pointer-events:none;opacity:.45}
       <svg class="chev" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
     <span id="net" class="net" hidden>Offline</span>
+    <button id="menuBtn" class="btn menubtn" type="button" aria-expanded="false" aria-controls="menuPanel" aria-label="Menu: ustawienia i pomoc"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button>
   </div>
 
   <section id="sessPanel" class="card lockable" aria-label="Sesje" hidden>
@@ -339,6 +354,64 @@ body.recording #tracks .trk-name{pointer-events:none;opacity:.45}
     <input id="sessFileIn" type="file" hidden>
   </section>
 
+  <section id="menuPanel" class="card menu-panel" aria-label="Menu" hidden>
+  <details class="fold lockable" id="settings">
+    <summary>Ustawienia</summary>
+    <div class="fold-body">
+      <div class="set-row">
+        <span>Zapamiętana poprawka nagrań<small>Uczy się, gdy przesuwasz strzałkami świeże nagranie.</small></span>
+        <output id="learnV" style="font-family:var(--font-num);color:var(--ink)">0 ms</output>
+        <button id="learnReset" class="btn sm" type="button">Wyzeruj</button>
+      </div>
+      <div class="set-row">
+        <span>Wyrównaj poziomy<small>Ustawia podobną głośność wszystkich śladów i zeruje suwaki miksera.</small></span>
+        <button id="levelAll" class="btn sm" type="button">Wyrównaj</button>
+      </div>
+      <div class="set-row">
+        <span>Rozbieg przed nagraniem<small>Ile podkładu zagra przed punktem startu.</small></span>
+        <div class="seg" role="group" aria-label="Rozbieg przed nagraniem">
+          <button class="btn" type="button" data-pre="0">0 s</button>
+          <button class="btn" type="button" data-pre="1">1 s</button>
+          <button class="btn" type="button" data-pre="2">2 s</button>
+          <button class="btn" type="button" data-pre="4">4 s</button>
+        </div>
+      </div>
+      <div class="set-row">
+        <span>Kopia zapasowa<small>Wszystkie sesje w jednym pliku: przed usunięciem aplikacji albo do przeniesienia na nowe urządzenie.</small></span>
+        <button id="backupBtn" class="btn sm" type="button">Zapisz kopię</button>
+        <button id="restoreBtn" class="btn sm" type="button">Przywróć</button>
+        <input id="restoreIn" type="file" hidden>
+      </div>
+      <div class="set-row">
+        <span>Wyczyść sesję<small>Usuwa wszystkie ślady ze wszystkich części bieżącej sesji.</small></span>
+        <button id="wipe" class="btn sm warn" type="button">Wyczyść</button>
+      </div>
+    </div>
+  </details>
+
+  <details class="fold help">
+    <summary>Jak to działa</summary>
+    <div class="fold-body">
+      <ol>
+        <li><strong>Wczytaj</strong> bierze nagranie z Plików albo film z galerii, np. nagranie ekranu ze Spotify. Z filmu zostaje sam dźwięk. Niektóre aplikacje (np. Apple Music) wyciszają nagrywanie ekranu. Z Dyktafonu: stuknij nagranie, potem <strong>•••</strong> → Udostępnij → <strong>Zachowaj w Plikach</strong>.</li>
+        <li><strong>Nagraj</strong> nagrywa do wybranego śladu, a pozostałe grają jako podkład. Załóż słuchawki, najlepiej przewodowe. Przy ustawionej pętli nagrywanie rusza przed A i kończy się samo po B. <strong>Wyczyść</strong> opróżnia ślad, a <strong>Usuń</strong> kasuje cały ślad.</li>
+        <li><strong>Mikser</strong> obok przebiegu (chowasz go i pokazujesz przyciskiem z suwakami obok czasu): pionowy suwak ustawia głośność śladu w decybelach (przesuwaj palcem w górę i w dół, kreska to 0 dB, dwuklik wraca do 0 dB). <strong>M</strong> wycisza ślad, a <strong>S</strong> zostawia słyszalne tylko ślady z włączonym solo. Każde nowe nagranie i wczytany plik dostaje automatycznie wyrównany poziom, więc suwakami tylko doprawiasz. Eksport MP3 brzmi tak samo jak w słuchawkach.</li>
+        <li><strong>Odtwarzanie:</strong> żółty przycisk startuje od A, gdy jest pętla, a bez pętli od początku. <strong>−10 / −5 / +5 / +10</strong> przeskakują o sekundy. Przy włączonej pętli przeskoki zostają w pętli.</li>
+        <li>Ślady 2–4 przesuwasz strzałkami względem śladu 1: <strong>‹ ›</strong> o 10 ms, <strong>‹‹ ››</strong> o 100 ms. Gdy poprawiasz świeże nagranie, aplikacja zapamiętuje poprawkę i stosuje ją do kolejnych nagrań.</li>
+        <li><strong>Pętla:</strong> przeciągnij palcem po przebiegu, a potem dostrój A i B w karcie <strong>Pętla</strong> strzałkami ← (wcześniej) i → (później). Znaczniki A i B możesz też przeciągać. <strong>Kłódka</strong> blokuje pętlę i przebieg przed przypadkowym dotknięciem; przesuwając palcem po przebiegu w górę i w dół, przewijasz wtedy ekran.</li>
+        <li><strong>Tempo i transpozycja</strong> działają na wszystkie ślady otwartej części. Każda część (A, B, C) ma własne tempo i tonację, a sekwencja gra każdą część w jej ustawieniach. Tempo zmienia się bez zmiany wysokości dźwięku, a transpozycja bez zmiany tempa.</li>
+        <li><strong>Części A, B, C:</strong> każda ma własne ślady, nagrania, pętlę, mikser, tempo i tonację. Kopiowanie części przenosi też jej tempo i tonację. Kropka przy literze oznacza, że część ma nagrania.</li>
+        <li><strong>Kopiowanie części:</strong> przycisk z dwoma kwadracikami obok liter kopiuje całą bieżącą część (ślady, pętlę, mikser) do innej. Potem podmieniasz w kopii tylko tę partię, którą chcesz zmienić.</li>
+        <li><strong>Sekwencja:</strong> klocki typu A×4, B×2. Stuknij klocek, żeby kółkiem wybrać część i liczbę powtórzeń (1–32), albo <strong>+</strong>, żeby dodać nowy. Przełącz na <strong>Sekwencja</strong> i stuknij ▶: każda część gra swoją pętlę (albo całość, gdy pętli nie ma) tyle razy, ile ustawisz, a po ostatnim klocku wszystko wraca na początek.</li>
+        <li><strong>Sesje:</strong> stuknij nazwę sesji na górze, żeby otworzyć listę, założyć nową, zrobić kopię albo wysłać sesję jako plik na drugie urządzenie. Wszystko zapisuje się samo.</li>
+        <li><strong>Eksportuj MP3</strong> zgrywa wszystko tak, jak słyszysz. W menu udostępniania wybierz Messengera albo Zachowaj w Plikach.</li>
+        <li><strong>Kopia zapasowa</strong> (menu ☰ → Ustawienia) zapisuje wszystkie sesje w jednym pliku. Zrób ją przed usunięciem aplikacji z ekranu. Przywrócisz ją przyciskiem Przywróć albo przez Otwórz plik sesji.</li>
+        <li>Aplikacja działa bez internetu. Brak dźwięku? Sprawdź, czy telefon nie jest w trybie cichym.</li>
+      </ol>
+    </div>
+  </details>
+  </section>
+
   <section id="partsCard" class="card lockable" aria-label="Części i sekwencja">
     <div class="parts-top">
       <div class="seg part-seg" role="group" aria-label="Część">
@@ -352,15 +425,18 @@ body.recording #tracks .trk-name{pointer-events:none;opacity:.45}
         <button class="btn" type="button" data-mode="part" aria-pressed="true">Część</button>
         <button class="btn" type="button" data-mode="seq" aria-pressed="false">Sekwencja</button>
       </div>
-      <button id="seqCollapse" class="btn collapse-btn" type="button" aria-label="Zwiń sekwencję"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 15l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     </div>
     <div id="copyRow" class="copy-row" hidden>
       <span id="copyLabel">Kopiuj część A do:</span>
       <div id="copyTargets" class="copy-targets"></div>
       <button id="copyCancel" class="btn sm" type="button">Anuluj</button>
     </div>
-    <div class="seq-body">
+    <div class="seq-row">
       <div id="seqStrip" class="seq-strip" aria-label="Sekwencja"></div>
+      <span id="seqSum" class="seq-sum"></span>
+      <button id="seqCollapse" class="btn collapse-btn" type="button" aria-label="Zwiń sekwencję"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 15l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+    <div class="seq-body">
       <div id="picker" class="picker" hidden>
         <div class="wheel-cap"><span>Część</span><span>Ile razy</span></div>
         <div class="wheels">
@@ -421,7 +497,10 @@ body.recording #tracks .trk-name{pointer-events:none;opacity:.45}
     </div>
     <p id="shiftNote" class="shift-note" hidden></p>
     <div class="readout lockable">
-      <div class="now"><span id="now">0:00,00</span><span id="dur" class="dur">/ 0:00,00</span></div>
+      <div class="now-row">
+        <div class="now"><span id="now">0:00,00</span><span id="dur" class="dur">/ 0:00,00</span></div>
+        <button id="mixToggle" class="btn mixbtn" type="button" aria-pressed="true" aria-label="Schowaj mikser" title="Mikser"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 4v16M12 4v16M18 4v16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect x="3.5" y="13" width="5" height="3.4" rx="1.2" fill="currentColor"/><rect x="9.5" y="6.5" width="5" height="3.4" rx="1.2" fill="currentColor"/><rect x="15.5" y="10.5" width="5" height="3.4" rx="1.2" fill="currentColor"/></svg></button>
+      </div>
       <div class="marks">
         <span class="chip"><b>A</b> <span id="tA">–:––,––</span></span>
         <span class="chip"><b>B</b> <span id="tB">–:––,––</span></span>
@@ -441,22 +520,29 @@ body.recording #tracks .trk-name{pointer-events:none;opacity:.45}
     <button class="btn tbtn" type="button" data-skip="10" aria-label="10 sekund do przodu">+10</button>
   </section>
 
-  <section class="row lockable" aria-label="Pętla" style="grid-template-columns:1fr 1fr">
-    <button id="loop" class="btn" type="button" aria-pressed="true">Pętla: wł.</button>
-    <button id="clearLoop" class="btn" type="button">Usuń pętlę</button>
-  </section>
-
-  <section class="tune lockable" aria-label="Dostrajanie punktów">
-    <span class="tune-label" id="tuneLabel">Dostrój</span>
-    <div class="seg" role="group" aria-labelledby="tuneLabel">
-      <button id="tuneA" class="btn" type="button" aria-pressed="true">A</button>
-      <button id="tuneB" class="btn" type="button" aria-pressed="false">B</button>
+  <section id="loopCard" class="card lockable" aria-label="Pętla">
+    <div class="trk-top">
+      <button id="loopToggle" class="fx-sum" type="button" aria-expanded="true" aria-controls="loopBody"><span class="fx-sum-l">Pętla</span><span id="loopSummary" class="fx-sum-v">brak pętli</span></button>
+      <button id="loopCollapse" class="btn collapse-btn" type="button" aria-label="Zwiń pętlę"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 15l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     </div>
-    <div class="nudges">
-      <button class="btn" type="button" data-d="-0.1">−0,1 s</button>
-      <button class="btn" type="button" data-d="-0.01">−0,01</button>
-      <button class="btn" type="button" data-d="0.01">+0,01</button>
-      <button class="btn" type="button" data-d="0.1">+0,1 s</button>
+    <div id="loopBody" class="fx-body">
+      <div class="row" style="grid-template-columns:1fr 1fr">
+        <button id="loop" class="btn" type="button" aria-pressed="true">Pętla: wł.</button>
+        <button id="clearLoop" class="btn" type="button">Usuń pętlę</button>
+      </div>
+      <div class="tune">
+        <span class="tune-label" id="tuneLabel">Dostrój</span>
+        <div class="seg" role="group" aria-labelledby="tuneLabel">
+          <button id="tuneA" class="btn" type="button" aria-pressed="true">A</button>
+          <button id="tuneB" class="btn" type="button" aria-pressed="false">B</button>
+        </div>
+        <div class="nudges">
+          <button class="btn" type="button" data-d="-0.1" aria-label="Wcześniej o 0,1 s">← 0,1 s</button>
+          <button class="btn" type="button" data-d="-0.01" aria-label="Wcześniej o 0,01 s">← 0,01</button>
+          <button class="btn" type="button" data-d="0.01" aria-label="Później o 0,01 s">0,01 →</button>
+          <button class="btn" type="button" data-d="0.1" aria-label="Później o 0,1 s">0,1 s →</button>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -497,62 +583,6 @@ body.recording #tracks .trk-name{pointer-events:none;opacity:.45}
       <div class="bar"><span id="busyBar"></span></div><span id="busyTxt">Przeliczam…</span>
     </div>
   </section>
-
-  <details class="fold lockable" id="settings">
-    <summary>Ustawienia</summary>
-    <div class="fold-body">
-      <div class="set-row">
-        <span>Zapamiętana poprawka nagrań<small>Uczy się, gdy przesuwasz strzałkami świeże nagranie.</small></span>
-        <output id="learnV" style="font-family:var(--font-num);color:var(--ink)">0 ms</output>
-        <button id="learnReset" class="btn sm" type="button">Wyzeruj</button>
-      </div>
-      <div class="set-row">
-        <span>Wyrównaj poziomy<small>Ustawia podobną głośność wszystkich śladów i zeruje suwaki miksera.</small></span>
-        <button id="levelAll" class="btn sm" type="button">Wyrównaj</button>
-      </div>
-      <div class="set-row">
-        <span>Rozbieg przed nagraniem<small>Ile podkładu zagra przed punktem startu.</small></span>
-        <div class="seg" role="group" aria-label="Rozbieg przed nagraniem">
-          <button class="btn" type="button" data-pre="0">0 s</button>
-          <button class="btn" type="button" data-pre="1">1 s</button>
-          <button class="btn" type="button" data-pre="2">2 s</button>
-          <button class="btn" type="button" data-pre="4">4 s</button>
-        </div>
-      </div>
-      <div class="set-row">
-        <span>Kopia zapasowa<small>Wszystkie sesje w jednym pliku: przed usunięciem aplikacji albo do przeniesienia na nowe urządzenie.</small></span>
-        <button id="backupBtn" class="btn sm" type="button">Zapisz kopię</button>
-        <button id="restoreBtn" class="btn sm" type="button">Przywróć</button>
-        <input id="restoreIn" type="file" hidden>
-      </div>
-      <div class="set-row">
-        <span>Wyczyść sesję<small>Usuwa wszystkie ślady ze wszystkich części bieżącej sesji.</small></span>
-        <button id="wipe" class="btn sm warn" type="button">Wyczyść</button>
-      </div>
-    </div>
-  </details>
-
-  <details class="fold help">
-    <summary>Jak to działa</summary>
-    <div class="fold-body">
-      <ol>
-        <li><strong>Wczytaj</strong> bierze nagranie z Plików albo film z galerii, np. nagranie ekranu ze Spotify. Z filmu zostaje sam dźwięk. Niektóre aplikacje (np. Apple Music) wyciszają nagrywanie ekranu. Z Dyktafonu: stuknij nagranie, potem <strong>•••</strong> → Udostępnij → <strong>Zachowaj w Plikach</strong>.</li>
-        <li><strong>Nagraj</strong> nagrywa do wybranego śladu, a pozostałe grają jako podkład. Załóż słuchawki, najlepiej przewodowe. Przy ustawionej pętli nagrywanie rusza przed A i kończy się samo po B. <strong>Wyczyść</strong> opróżnia ślad, a <strong>Usuń</strong> kasuje cały ślad.</li>
-        <li><strong>Mikser</strong> obok przebiegu: pionowy suwak ustawia głośność śladu w decybelach (przesuwaj palcem w górę i w dół, kreska to 0 dB, dwuklik wraca do 0 dB). <strong>M</strong> wycisza ślad, a <strong>S</strong> zostawia słyszalne tylko ślady z włączonym solo. Każde nowe nagranie i wczytany plik dostaje automatycznie wyrównany poziom, więc suwakami tylko doprawiasz. Eksport MP3 brzmi tak samo jak w słuchawkach.</li>
-        <li><strong>Odtwarzanie:</strong> żółty przycisk startuje od A, gdy jest pętla, a bez pętli od początku. <strong>−10 / −5 / +5 / +10</strong> przeskakują o sekundy. Przy włączonej pętli przeskoki zostają w pętli.</li>
-        <li>Ślady 2–4 przesuwasz strzałkami względem śladu 1: <strong>‹ ›</strong> o 10 ms, <strong>‹‹ ››</strong> o 100 ms. Gdy poprawiasz świeże nagranie, aplikacja zapamiętuje poprawkę i stosuje ją do kolejnych nagrań.</li>
-        <li><strong>Pętla:</strong> przeciągnij palcem po przebiegu, a potem dostrój A i B przyciskami ±. Znaczniki A i B możesz też przeciągać. <strong>Kłódka</strong> blokuje pętlę i przebieg przed przypadkowym dotknięciem (przewijanie działa dalej).</li>
-        <li><strong>Tempo i transpozycja</strong> działają na wszystkie ślady otwartej części. Każda część (A, B, C) ma własne tempo i tonację, a sekwencja gra każdą część w jej ustawieniach. Tempo zmienia się bez zmiany wysokości dźwięku, a transpozycja bez zmiany tempa.</li>
-        <li><strong>Części A, B, C:</strong> każda ma własne ślady, nagrania, pętlę, mikser, tempo i tonację. Kopiowanie części przenosi też jej tempo i tonację. Kropka przy literze oznacza, że część ma nagrania.</li>
-        <li><strong>Kopiowanie części:</strong> przycisk z dwoma kwadracikami obok liter kopiuje całą bieżącą część (ślady, pętlę, mikser) do innej. Potem podmieniasz w kopii tylko tę partię, którą chcesz zmienić.</li>
-        <li><strong>Sekwencja:</strong> klocki typu A×4, B×2. Stuknij klocek, żeby kółkiem wybrać część i liczbę powtórzeń (1–32), albo <strong>+</strong>, żeby dodać nowy. Przełącz na <strong>Sekwencja</strong> i stuknij ▶: każda część gra swoją pętlę (albo całość, gdy pętli nie ma) tyle razy, ile ustawisz, a po ostatnim klocku wszystko wraca na początek.</li>
-        <li><strong>Sesje:</strong> stuknij nazwę sesji na górze, żeby otworzyć listę, założyć nową, zrobić kopię albo wysłać sesję jako plik na drugie urządzenie. Wszystko zapisuje się samo.</li>
-        <li><strong>Eksportuj MP3</strong> zgrywa wszystko tak, jak słyszysz. W menu udostępniania wybierz Messengera albo Zachowaj w Plikach.</li>
-        <li><strong>Kopia zapasowa</strong> (w Ustawieniach) zapisuje wszystkie sesje w jednym pliku. Zrób ją przed usunięciem aplikacji z ekranu. Przywrócisz ją przyciskiem Przywróć albo przez Otwórz plik sesji.</li>
-        <li>Aplikacja działa bez internetu. Brak dźwięku? Sprawdź, czy telefon nie jest w trybie cichym.</li>
-      </ol>
-    </div>
-  </details>
 
   <div id="update" class="update" role="status" hidden>
     <span>Jest nowa wersja</span>
@@ -1368,6 +1398,28 @@ function setFxCollapsed(v){
   $('fxCollapse').setAttribute('aria-label', v ? 'Rozwiń tempo i transpozycję' : 'Zwiń tempo i transpozycję');
 }
 $('fxToggle').addEventListener('click', () => setFxCollapsed(!fxCollapsed));
+let loopCollapsed = true;
+try { const v = localStorage.getItem('looper.loopCollapsed'); if (v != null) loopCollapsed = v === '1'; } catch (e) {}
+function setLoopCollapsed(v){
+  loopCollapsed = !!v;
+  try { localStorage.setItem('looper.loopCollapsed', loopCollapsed ? '1' : '0'); } catch (e) {}
+  $('loopCard').classList.toggle('collapsed', loopCollapsed);
+  $('loopToggle').setAttribute('aria-expanded', String(!loopCollapsed));
+  $('loopCollapse').setAttribute('aria-label', loopCollapsed ? 'Rozwiń pętlę' : 'Zwiń pętlę');
+}
+$('loopToggle').addEventListener('click', () => setLoopCollapsed(!loopCollapsed));
+$('loopCollapse').addEventListener('click', () => setLoopCollapsed(!loopCollapsed));
+let mixHidden = false;
+try { mixHidden = localStorage.getItem('looper.mixHidden') === '1'; } catch (e) {}
+function setMixHidden(v){
+  mixHidden = !!v;
+  try { localStorage.setItem('looper.mixHidden', mixHidden ? '1' : '0'); } catch (e) {}
+  $('card').classList.toggle('mix-hidden', mixHidden);
+  const b = $('mixToggle');
+  b.setAttribute('aria-pressed', String(!mixHidden));
+  b.setAttribute('aria-label', mixHidden ? 'Pokaż mikser' : 'Schowaj mikser');
+}
+$('mixToggle').addEventListener('click', () => setMixHidden(!mixHidden));
 $('fxCollapse').addEventListener('click', () => setFxCollapsed(!fxCollapsed));
 
 function applyGains(){
@@ -1929,6 +1981,9 @@ function ui(){
   lb.disabled = !hasLoop || locked;
   lb.setAttribute('aria-pressed', String(hasLoop && loopOn));
   lb.textContent = 'Pętla: ' + (loopOn ? 'wł.' : 'wył.');
+  const ls = $('loopSummary');
+  ls.textContent = !hasLoop ? 'brak pętli' : (loopOn ? 'wł.' : 'wył.') + ' · ' + fmt(A) + '–' + fmt(B);
+  ls.classList.toggle('changed', hasLoop && loopOn);
   const canPlay = playMode === 'seq' ? PARTS.some(partHas) : has;
   document.querySelectorAll('[data-skip]').forEach((b) => { b.disabled = !canPlay; });
   $('toStart').disabled = !canPlay;
@@ -1986,6 +2041,7 @@ function renderParts(){
   document.querySelectorAll('[data-mode]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === playMode)));
   $('partsCard').classList.toggle('collapsed', seqCollapsed);
   $('seqCollapse').setAttribute('aria-label', seqCollapsed ? 'Rozwiń sekwencję' : 'Zwiń sekwencję');
+  $('seqSum').textContent = sequence.length ? 'Sekwencja: ' + sequence.map((x) => x.p + '×' + x.n).join(' · ') : 'Sekwencja pusta';
   renderSeqStrip();
 }
 function renderSeqStrip(){
@@ -2415,9 +2471,17 @@ function renderSessions(){
       '</div>';
   }).join('');
 }
+function toggleMenu(force){
+  const p = $('menuPanel');
+  p.hidden = force != null ? !force : !p.hidden;
+  $('menuBtn').setAttribute('aria-expanded', String(!p.hidden));
+  if (!p.hidden && !$('sessPanel').hidden) toggleSessPanel(false);
+}
+$('menuBtn').addEventListener('click', () => toggleMenu());
 function toggleSessPanel(force){
   const p = $('sessPanel');
   p.hidden = force != null ? !force : !p.hidden;
+  if (!p.hidden && !$('menuPanel').hidden) toggleMenu(false);
   $('sessBtn').setAttribute('aria-expanded', String(!p.hidden));
   $('renameRow').hidden = true;
   renderSessions();
@@ -2869,9 +2933,11 @@ async function doBounce(kind){
 }
 
 /* ---------- pointer on waveform ---------- */
+// Locked loop: vertical swipes scroll the page (touch-action: pan-y); only a tap or sideways drag says it's locked.
+let lockTouch = null;
 canvas.addEventListener('pointerdown', (e) => {
   if (!content().length || rec) return;
-  if (locked){ lockedMsg(); return; }
+  if (locked){ lockTouch = { x: e.clientX, y: e.clientY }; return; }
   e.preventDefault();
   try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
   const r = canvas.getBoundingClientRect();
@@ -2926,13 +2992,16 @@ function endDrag(cancel){
   if (d.mode === 'select'){
     if (B - A < MIN_LOOP) B = Math.min(timelineDur(), A + MIN_LOOP);
     afterMarkerChange('A');
-    say('Pętla ' + fmt(A) + ' – ' + fmt(B) + '. Dostrój ją przyciskami ±.');
+    say('Pętla ' + fmt(A) + ' – ' + fmt(B) + '. Dostroisz ją w karcie Pętla.');
     return;
   }
   afterMarkerChange(d.mode);
 }
-canvas.addEventListener('pointerup', () => endDrag(false));
-canvas.addEventListener('pointercancel', () => endDrag(true));
+canvas.addEventListener('pointerup', (e) => {
+  if (lockTouch){ const t = lockTouch; lockTouch = null; if (Math.abs(e.clientY - t.y) < 12) lockedMsg(); return; }
+  endDrag(false);
+});
+canvas.addEventListener('pointercancel', () => { lockTouch = null; endDrag(true); });
 
 /* ---------- controls ---------- */
 $('play').addEventListener('click', togglePlay);
@@ -3128,6 +3197,8 @@ updateCanvasHeight();
 ui();
 setCollapsed(tracksCollapsed);
 setFxCollapsed(fxCollapsed);
+setMixHidden(mixHidden);
+setLoopCollapsed(loopCollapsed);
 (async () => {
   try {
     await initSessions();

@@ -8,7 +8,7 @@ with sync_playwright() as p:
     c = b.new_context(viewport={'width':390,'height':844}); pg = c.new_page(); errs=[]
     pg.on('pageerror', lambda e: errs.append('PAGEERR '+str(e)))
     pg.goto(URL); pg.wait_for_timeout(1500)
-    pg.click('#settings summary'); pg.wait_for_timeout(200)
+    pg.click('#menuBtn'); pg.click('#settings summary'); pg.wait_for_timeout(200)
     with pg.expect_file_chooser() as fc: pg.click('#restoreBtn')
     fc.value.set_files(FIX + '/legacy-backup.looper'); pg.wait_for_timeout(3500)
     pg.click('#sessBtn'); pg.wait_for_timeout(200)

@@ -57,7 +57,7 @@ with sync_playwright() as p:
     pg.wait_for_timeout(2500)
     # 5) backup all sessions + restore
     pg.click('#sessBtn'); pg.click('#sessNew'); pg.wait_for_timeout(1200); load(pg, 1, FIX + '/quiet.wav'); pg.click('#sessBtn')
-    pg.click('#settings summary'); pg.wait_for_timeout(200)
+    pg.click('#menuBtn'); pg.click('#settings summary'); pg.wait_for_timeout(200)
     pg.click('#backupBtn'); pg.wait_for_timeout(2500)
     print('backup button:', pg.inner_text('#backupBtn'))
     with pg.expect_download(timeout=8000) as dl: pg.click('#backupBtn')

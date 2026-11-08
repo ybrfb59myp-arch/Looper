@@ -141,7 +141,7 @@ komentarzami `/* ---------- nazwa ---------- */`.
   Górne `tempoPct/semi` = otwarta część (zgodność wstecz). **Migracje** (`loadSession`): v1 (`track0/track1/state`),
   v2 (`state2`), v3 (jedna część) i v4 bez tempa w częściach, gdzie każda część dziedziczy wspólne tempo.
 - Ustawienia w localStorage: `looper.learnMs`, `looper.preroll`, `looper.fxCollapsed`, `looper.tracksCollapsed`,
-  `looper.seqCollapsed`.
+  `looper.seqCollapsed`, `looper.loopCollapsed`, `looper.mixHidden`.
 - **Plik sesji** `.looper`: `"LOOPERS1"` + uint32 LE długość JSON + JSON (`format:'looper-session', version:2`,
   części z `tracks` i ich `bytes`) + kolejne dane nagrań.
 - **Kopia zapasowa** `.looper`: `"LOOPERB1"` + uint32 + JSON (`format:'looper-backup', version:1, sessions:[{ name,
@@ -161,7 +161,7 @@ komentarzami `/* ---------- nazwa ---------- */`.
 
 - Nazwa **Looper** (nie „Pętla A–B”); bez dużego tytułu na górze.
 - Zaznaczanie pętli: przeciągnięcie palcem po przebiegu. Przyciski „Ustaw A/B” były niezrozumiałe, więc wypadły;
-  zostało **Dostrój** A/B (precyzyjne przesuwanie punktów) oraz **Pętla wł/wył** i **Usuń pętlę**.
+  zostało **Dostrój** A/B (precyzyjne przesuwanie punktów) oraz **Pętla wł/wył** i **Usuń pętlę** (w karcie Pętla).
 - **Kłódka** blokuje pętlę, bo właściciel przypadkiem przestawiał ją dotykiem.
 - Transport: żółty ⏮ (na początek / do A), −10, −5, ▶, +5, +10. Przycisk „Powiększ” usunięty.
 - Korekta opóźnienia nagrań: zamiast osobnego suwaka jest przesuwanie śladów 2+ względem śladu 1
@@ -172,7 +172,19 @@ komentarzami `/* ---------- nazwa ---------- */`.
 - Chybienie w suwak zaznaczało tekst (niebieskie ramki): globalne `user-select:none`, `-webkit-touch-callout:none`.
 - Karta tempa i tonacji domyślnie zwinięta, z podsumowaniem i literą części; na wąskim ekranie przy zmienionych
   wartościach chowa napis „Tempo i tonacja”, żeby nic się nie ucinało.
-- „Jak to działa” (pomoc) domyślnie zwinięta.
+- **Ustawienia** i **Jak to działa** są w menu ☰ (prawy górny róg, obok nazwy sesji), nie na dole strony.
+  Menu i lista sesji to panele pod paskiem sesji; otwarcie jednego zamyka drugi.
+- **Mikser** można schować przyciskiem z suwakami w wierszu z czasem (`#mixToggle`, `looper.mixHidden`);
+  przebiegi zajmują wtedy całą szerokość.
+- **Karta Pętla** (`#loopCard`, domyślnie zwinięta, `looper.loopCollapsed`): Pętla wł./wył., Usuń pętlę, Dostrój A/B
+  i przyciski ze strzałkami „← 0,1 s”, „← 0,01”, „0,01 →”, „0,1 s →” (strzałka = kierunek na osi czasu).
+  Na pasku podsumowanie, np. „wł. · 0:01,97–0:07,38”.
+- **Karta części na iPhonie**: A/B/C, kopiowanie i Część/Sekwencja w jednym rzędzie (ściśnięte przyciski poniżej
+  430 px szerokości); przycisk zwijania sekwencji jest przy klockach, a po zwinięciu zostaje jednolinijkowe
+  podsumowanie „Sekwencja: A×2 · B×1 · …”.
+- **Zablokowana pętla**: przebieg ma `touch-action: pan-y`, więc ruch palcem w górę i w dół przewija stronę;
+  komunikat o blokadzie pojawia się tylko po stuknięciu albo ruchu w bok. Suwaki miksera nadal reagują na
+  przeciąganie (żeby przewijać tam, można schować mikser).
 
 ## Ograniczenia i odpowiedzi na częste pytania
 
@@ -184,6 +196,13 @@ komentarzami `/* ---------- nazwa ---------- */`.
 - Nagrania nigdzie nie są wysyłane.
 - Aplikacja nagrywa z mikrofonu, który iOS wybierze jako wejście (np. podłączony mikrofon USB-C/Lightning).
   Zwykłe mikrofony Bluetooth (słuchawkowe) iOS obsługuje w jakości rozmowy telefonicznej, więc się nie nadają.
+
+## Praca z właścicielem w długiej rozmowie
+
+- Właściciel prosił, żeby mu powiedzieć, kiedy rozmowa robi się za długa. Przy większej zmianie zaproponuj
+  nową rozmowę zaczynającą się od „Kontynuujemy Looper, przeczytaj notatki z repozytorium”.
+- Często wysyła kilka próśb jedna po drugiej (ze zrzutami ekranu i zielonymi zaznaczeniami): zbierz je,
+  zrób razem i opublikuj jedną aktualizacją.
 
 ## Rozważane i odłożone
 

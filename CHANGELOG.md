@@ -3,6 +3,11 @@
 Najnowsze na górze. Daty i godziny według czasu polskiego.
 
 ## 2026-11-08
+- Menu ☰ w prawym górnym rogu: tam przeniesione **Ustawienia** i **Jak to działa** (zniknęły z dołu strony).
+- Chowanie miksera przyciskiem z suwakami obok czasu; przebiegi zajmują wtedy całą szerokość.
+- Zwijana karta **Pętla** (jak „Tempo i tonacja”) z podsumowaniem; przyciski Dostrój ze strzałkami ← →.
+- Karta części na iPhonie o rząd niższa; po zwinięciu sekwencji jednolinijkowe podsumowanie.
+- Przy zablokowanej pętli przesuwanie palcem po przebiegu w górę i w dół przewija ekran.
 - Źródła, skrypt budujący, testy i notatki projektu (`CLAUDE.md`) trafiły do repozytorium, żeby każda
   nowa rozmowa albo sesja w zakładce Code mogła kontynuować pracę.
 - **Osobne tempo i tonacja dla każdej części** (A, B, C). Sekwencja i jej eksport grają każdą część w jej

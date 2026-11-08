@@ -37,7 +37,7 @@ with sync_playwright() as p:
     pg.click('.track:nth-child(3) [data-act=rec]'); pg.wait_for_timeout(7000)
     print('t3 rec:', names(pg), '| rec?', pg.evaluate("document.body.classList.contains('recording')"), '| off:', pg.inner_text('.track:nth-child(3) .off-out'))
     pg.click('.track:nth-child(3) [data-o="0.01"]'); pg.click('.track:nth-child(3) [data-o="0.01"]'); pg.wait_for_timeout(500)
-    pg.click('#settings summary'); pg.wait_for_timeout(100)
+    pg.click('#menuBtn'); pg.click('#settings summary'); pg.wait_for_timeout(100)
     print('learned:', pg.inner_text('#learnV'))
     # sessions
     pg.click('#sessBtn'); pg.wait_for_timeout(200)

@@ -37,7 +37,7 @@ with sync_playwright() as p:
     pg.click('#toStart'); pg.wait_for_timeout(300); pg.click('#play')
     print('toStart paused at:', pg.inner_text('#now'))
     pg.click('[data-skip="10"]'); pg.wait_for_timeout(100); print('+10 in loop ->', pg.inner_text('#now'))
-    pg.click('#loop'); pg.click('[data-skip="5"]'); pg.wait_for_timeout(100); print('loop off, +5 ->', pg.inner_text('#now'))
+    pg.click('#loopToggle'); pg.click('#loop'); pg.click('[data-skip="5"]'); pg.wait_for_timeout(100); print('loop off, +5 ->', pg.inner_text('#now'))
     pg.click('[data-skip="-10"]'); pg.wait_for_timeout(100); print('-10 ->', pg.inner_text('#now'))
     pg.click('#lock'); pg.click('[data-skip="5"]'); pg.wait_for_timeout(100); print('locked, +5 ->', pg.inner_text('#now'), '| skip enabled:', pg.is_enabled('[data-skip="5"]'))
     pg.click('#lock')

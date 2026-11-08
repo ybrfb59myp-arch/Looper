@@ -22,6 +22,7 @@ które **musi być puste**. Poniżej, co powinno wyjść (nazwy sesji i godziny 
 | `test_sequence_timeline.py` | czy widok podąża za grającą częścią (A×1, B×1 w kółko) | `timeline:` naprzemiennie bloki `A` i `B` |
 | `test_resume_copy_backup.py` | strażnik „zamrożonego” dźwięku i powrót z tła, kopiowanie części, zwijana karta tempa, kopia zapasowa | `watchdog: contexts 1 -> 2` i ruszająca pozycja, `after return: contexts 2 -> 3`, `confirm label: Zastąpić B?`, `backup magic: b'LOOPERB1'`, `Przywrócono 2 sesje` |
 | `test_part_tempo.py` | osobne tempo i tonacja w częściach, sekwencja z różnymi tempami, eksport, zapamiętanie, kopiowanie | `B (new): B \| 0 \| 0 \| bez zmian`, `seq mp3 … duration ≈ expected`, `copied to C: C \| C \| -19 …` |
+| `test_layout.py` | menu ☰, chowanie miksera, karta Pętla ze strzałkami, karta części w jednym rzędzie, przewijanie przy zablokowanej pętli (iPhone i iPad) | `parts top row height: 46`, `nudges: ['← 0,1 s', '← 0,01', '0,01 →', '0,1 s →']`, `mixer hidden: True`, `locked canvas touch-action: pan-y`, `tap on locked loop says: Pętla jest zablokowana` |
 | `test_legacy_backup.py` | kopia zapasowa ze starej wersji (jedno tempo −12% dla sesji) | A, B i C mają `-12` |
 
 Zachowań typowych dla iOS (usypianie dźwięku po schowaniu aplikacji, wybór mikrofonu, udostępnianie plików)
