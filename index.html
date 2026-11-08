@@ -420,7 +420,7 @@ body.recording #tracks .trk-name{pointer-events:none;opacity:.45}
         <li><strong>Mikser</strong> obok przebiegu (chowasz go i pokazujesz przyciskiem z suwakami obok czasu): pionowy suwak ustawia głośność śladu w decybelach (przesuwaj palcem w górę i w dół, kreska to 0 dB, dwuklik wraca do 0 dB). <strong>M</strong> wycisza ślad, a <strong>S</strong> zostawia słyszalne tylko ślady z włączonym solo. Każde nowe nagranie i wczytany plik dostaje automatycznie wyrównany poziom, więc suwakami tylko doprawiasz. Eksport MP3 brzmi tak samo jak w słuchawkach.</li>
         <li><strong>Odtwarzanie:</strong> żółty przycisk startuje od A, gdy jest pętla, a bez pętli od początku. <strong>−10 / −5 / +5 / +10</strong> przeskakują o sekundy. Przy włączonej pętli przeskoki zostają w pętli.</li>
         <li>Ślady 2–4 przesuwasz strzałkami względem śladu 1: <strong>‹ ›</strong> o 10 ms, <strong>‹‹ ››</strong> o 100 ms. Gdy poprawiasz świeże nagranie, aplikacja zapamiętuje poprawkę i stosuje ją do kolejnych nagrań.</li>
-        <li><strong>Pętla:</strong> przeciągnij palcem po przebiegu, a potem dostrój A i B w karcie <strong>Pętla</strong> strzałkami ← (wcześniej) i → (później). Znaczniki A i B możesz też przeciągać. <strong>Kłódka</strong> blokuje pętlę i przebieg przed przypadkowym dotknięciem; przesuwając palcem po przebiegu w górę i w dół, przewijasz wtedy ekran.</li>
+        <li><strong>Pętla:</strong> przeciągnij palcem po przebiegu, a potem dostrój A i B w karcie <strong>Pętla</strong> strzałkami ← (wcześniej) i → (później). Znaczniki A i B możesz też przeciągać. <strong>Kłódka</strong> blokuje pętlę i przebieg przed przypadkowym dotknięciem; przesuwając palcem po przebiegu w górę i w dół, przewijasz wtedy ekran. Zamknięcie kłódki zwija kartę Pętla i wyłącza lupę, a otwarcie z powrotem rozwija kartę.</li>
         <li><strong>Lupa przejścia</strong> (pigułka z lupą obok A i B w karcie Pętla): przesuń ją w prawo, a zamiast całej pętli zagra w kółko tylko jej końcówka i zaraz po niej początek, razem do 5 sekund. Tak łatwo dostroisz strzałkami samo przejście z B na A. Przesunięcie do końca w lewo wyłącza lupę; wyłącza się też sama po zmianie części.</li>
         <li><strong>Tempo i transpozycja</strong> działają na wszystkie ślady otwartej części. Każda część (A, B, C) ma własne tempo i tonację, a sekwencja gra każdą część w jej ustawieniach. Tempo zmienia się bez zmiany wysokości dźwięku, a transpozycja bez zmiany tempa.</li>
         <li><strong>Części A, B, C:</strong> każda ma własne ślady, nagrania, pętlę, mikser, tempo i tonację. Kopiowanie części przenosi też jej tempo i tonację. Kropka przy literze oznacza, że część ma nagrania.</li>
@@ -1787,6 +1787,10 @@ function skip(d){
 function toggleLock(){
   locked = !locked;
   if (locked){ shiftId = null; drag = null; }
+  // Locking means the loop is tuned: fold the Pętla card and leave the magnifier (the whole loop plays);
+  // unlocking opens the card again for tuning.
+  setLoopCollapsed(locked);
+  if (locked && seamLen > 0){ seamLen = 0; if (playing) startAt(pos()); }
   ui();
   say(locked ? 'Pętla zablokowana. Przebieg nie reaguje na dotyk.' : 'Pętla odblokowana.');
 }

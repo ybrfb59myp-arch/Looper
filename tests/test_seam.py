@@ -90,6 +90,18 @@ with sync_playwright() as p:
         drag(-1000); pg.evaluate('window.__starts.length = 0'); pg.click('#play'); pg.wait_for_timeout(400); pg.click('#play')
         st2 = pg.evaluate('window.__starts')
         print(tag, 'normal loop sources:', {(s['loop'], round(s['ls'], 3), round(s['le'], 3)) for s in st2}, '| summary', repr(pg.inner_text('#loopSummary')))
+        # kłódka w trakcie grania z lupą: karta się zwija, lupa wyłącza, gra cała pętla; otwarcie kłódki rozwija kartę
+        drag(80); pg.click('#play'); pg.wait_for_timeout(600)
+        pg.click('#lock'); pg.wait_for_timeout(200)
+        lp = []
+        for i in range(30):
+            pg.wait_for_timeout(100); lp.append(secs(pg.inner_text('#now')))
+        pg.click('#play'); pg.wait_for_timeout(150)
+        outside = sum(1 for t in lp if A + hh + 0.1 < t < B - hh - 0.1)
+        print(tag, 'locked: card folded', pg.evaluate("document.getElementById('loopCard').classList.contains('collapsed')"), '| seam', pg.get_attribute('#seam', 'aria-valuetext'),
+              '| summary', repr(pg.inner_text('#loopSummary')), '| positions outside seam windows', outside, '/', len(lp))
+        pg.click('#lock'); pg.wait_for_timeout(200)
+        print(tag, 'unlocked: card open', not pg.evaluate("document.getElementById('loopCard').classList.contains('collapsed')"))
         # prawdziwy dźwięk: lupa ~2 s, nagranie wyjścia, odczyt wysokości -> miejsce w nagraniu
         drag(80); pg.wait_for_timeout(100)
         pg.evaluate("() => new Promise((res) => { const r = window.__rec; r.onstop = () => { const n = new MediaRecorder(r.stream); window.__chunks = []; n.ondataavailable = (e) => window.__chunks.push(e.data); window.__rec = n; n.start(); res(); }; r.stop(); })")

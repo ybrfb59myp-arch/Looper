@@ -188,7 +188,9 @@ komentarzami `/* ---------- nazwa ---------- */`.
 - Nazwa **Looper** (nie „Pętla A–B”); bez dużego tytułu na górze.
 - Zaznaczanie pętli: przeciągnięcie palcem po przebiegu. Przyciski „Ustaw A/B” były niezrozumiałe, więc wypadły;
   zostało **Dostrój** A/B (precyzyjne przesuwanie punktów) oraz **Pętla wł/wył** i **Usuń pętlę** (w karcie Pętla).
-- **Kłódka** blokuje pętlę, bo właściciel przypadkiem przestawiał ją dotykiem.
+- **Kłódka** blokuje pętlę, bo właściciel przypadkiem przestawiał ją dotykiem. Zamknięcie kłódki zwija kartę Pętla
+  i wyłącza lupę (gra cała pętla), otwarcie rozwija kartę (`toggleLock`, życzenie z 2026-11-08). Dotyczy tylko
+  stuknięcia kłódki, nie przełączania części.
 - Transport: żółty ⏮ (na początek / do A), −10, −5, ▶, +5, +10. Przycisk „Powiększ” usunięty.
 - Korekta opóźnienia nagrań: zamiast osobnego suwaka jest przesuwanie śladów 2+ względem śladu 1
   (strzałki w rozwijanych opcjach śladu) i automatyczne zapamiętywanie tej poprawki.

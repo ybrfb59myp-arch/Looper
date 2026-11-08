@@ -3,6 +3,7 @@
 Najnowsze na górze. Daty i godziny według czasu polskiego.
 
 ## 2026-11-08 (wieczór)
+- Zamknięcie kłódki zwija kartę Pętla i wyłącza lupę (gra cała pętla); otwarcie kłódki rozwija kartę.
 - **Lupa przejścia** w karcie Pętla: pozioma pigułka obok Dostrój A/B (0 = wyłączona, do 5 s). Gra w kółko końcówkę
   pętli i zaraz po niej jej początek, bez ciszy, żeby dostroić samo przejście B→A. Strzałki dostrajania w osobnym rzędzie.
 - **Przypomnienia o kopiach:** po wyjściu z sesji ze zmianami (i przy starcie aplikacji) pasek „Zapisz kopię” z kopią
