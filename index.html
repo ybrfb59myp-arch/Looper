@@ -95,6 +95,9 @@ input[type="text"]{-webkit-user-select:text;user-select:text;-webkit-touch-callo
 .rename input{flex:1;min-width:0;font:inherit;font-size:1rem;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
 .rename input:focus-visible{outline:3px solid var(--accent);outline-offset:1px}
 .note{margin:0;font-size:.8rem;color:var(--muted)}
+.bkbar{display:flex;align-items:center;flex-wrap:wrap;gap:8px 10px;padding:8px 10px;border-radius:12px;background:var(--accent-soft);border:1px solid var(--accent);font-size:.88rem;font-weight:700}
+.bkbar > span{flex:1 1 180px;min-width:0}
+.bkbar-btns{display:flex;gap:6px;margin-left:auto}
 
 .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:10px}
 .card.drop{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
@@ -200,6 +203,8 @@ input[type="range"]:focus-visible{outline:3px solid var(--accent);outline-offset
 /* waveform + mixer */
 .wave-row{display:flex;gap:8px;align-items:flex-start}
 .wave-row canvas{flex:1;min-width:0}
+.wave-box{position:relative;flex:1;min-width:0}
+canvas.playline{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;touch-action:auto}
 .mixer{flex:none;width:80px;display:flex;flex-direction:column;padding-top:26px}
 .strip{position:relative;display:flex;align-items:stretch;justify-content:flex-end;gap:6px;padding:4px 0;touch-action:none;cursor:ns-resize}
 .strip .ms{cursor:default}
@@ -284,7 +289,16 @@ canvas.locked{cursor:default;touch-action:pan-y}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:12px;overflow:hidden;flex:none}
 .seg .btn{border:0;border-radius:0;min-width:48px}
 .seg .btn[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
-.nudges{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;flex:1 1 210px}
+.nudges{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;flex:1 1 100%}
+/* seam magnifier: a pill like the iOS brightness slider; empty = off, full = 5 s */
+.seam{position:relative;flex:1 1 90px;min-width:90px;height:46px;border-radius:999px;background:var(--sunk);border:1px solid var(--line);overflow:hidden;
+  touch-action:pan-y;cursor:ew-resize;-webkit-tap-highlight-color:transparent}
+.seam svg{position:absolute;left:15px;top:50%;margin-top:-10px;color:var(--muted);pointer-events:none}
+.seam-fill{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--accent);overflow:hidden;pointer-events:none}
+.seam-fill svg{color:var(--on-accent)}
+.seam.dragging{border-color:var(--accent)}
+.seam[aria-disabled="true"]{opacity:.4;cursor:default}
+.seam:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .nudges .btn{font-family:var(--font-num);font-size:.8rem;padding:8px 2px;font-weight:700}
 
 .msg{min-height:1.3em;margin:-8px 0;font-size:.9rem;color:var(--muted)}
@@ -335,6 +349,14 @@ body.recording #tracks .trk-name{pointer-events:none;opacity:.45}
     <button id="menuBtn" class="btn menubtn" type="button" aria-expanded="false" aria-controls="menuPanel" aria-label="Menu: ustawienia i pomoc"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button>
   </div>
 
+  <div id="bkBar" class="bkbar lockable" role="status" hidden>
+    <span id="bkText"></span>
+    <div class="bkbar-btns">
+      <button id="bkSave" class="btn sm accent" type="button">Zapisz kopię</button>
+      <button id="bkLater" class="btn sm" type="button">Nie teraz</button>
+    </div>
+  </div>
+
   <section id="sessPanel" class="card lockable" aria-label="Sesje" hidden>
     <div class="grid3">
       <button id="sessNew" class="btn sm" type="button">Nowa sesja</button>
@@ -377,7 +399,7 @@ body.recording #tracks .trk-name{pointer-events:none;opacity:.45}
         </div>
       </div>
       <div class="set-row">
-        <span>Kopia zapasowa<small>Wszystkie sesje w jednym pliku: przed usunięciem aplikacji albo do przeniesienia na nowe urządzenie.</small></span>
+        <span>Kopia zapasowa<small>Wszystkie sesje w jednym pliku: przed usunięciem aplikacji albo do przeniesienia na nowe urządzenie.</small><small id="backupLast"></small></span>
         <button id="backupBtn" class="btn sm" type="button">Zapisz kopię</button>
         <button id="restoreBtn" class="btn sm" type="button">Przywróć</button>
         <input id="restoreIn" type="file" hidden>
@@ -399,6 +421,7 @@ body.recording #tracks .trk-name{pointer-events:none;opacity:.45}
         <li><strong>Odtwarzanie:</strong> żółty przycisk startuje od A, gdy jest pętla, a bez pętli od początku. <strong>−10 / −5 / +5 / +10</strong> przeskakują o sekundy. Przy włączonej pętli przeskoki zostają w pętli.</li>
         <li>Ślady 2–4 przesuwasz strzałkami względem śladu 1: <strong>‹ ›</strong> o 10 ms, <strong>‹‹ ››</strong> o 100 ms. Gdy poprawiasz świeże nagranie, aplikacja zapamiętuje poprawkę i stosuje ją do kolejnych nagrań.</li>
         <li><strong>Pętla:</strong> przeciągnij palcem po przebiegu, a potem dostrój A i B w karcie <strong>Pętla</strong> strzałkami ← (wcześniej) i → (później). Znaczniki A i B możesz też przeciągać. <strong>Kłódka</strong> blokuje pętlę i przebieg przed przypadkowym dotknięciem; przesuwając palcem po przebiegu w górę i w dół, przewijasz wtedy ekran.</li>
+        <li><strong>Lupa przejścia</strong> (pigułka z lupą obok A i B w karcie Pętla): przesuń ją w prawo, a zamiast całej pętli zagra w kółko tylko jej końcówka i zaraz po niej początek, razem do 5 sekund. Tak łatwo dostroisz strzałkami samo przejście z B na A. Przesunięcie do końca w lewo wyłącza lupę; wyłącza się też sama po zmianie części.</li>
         <li><strong>Tempo i transpozycja</strong> działają na wszystkie ślady otwartej części. Każda część (A, B, C) ma własne tempo i tonację, a sekwencja gra każdą część w jej ustawieniach. Tempo zmienia się bez zmiany wysokości dźwięku, a transpozycja bez zmiany tempa.</li>
         <li><strong>Części A, B, C:</strong> każda ma własne ślady, nagrania, pętlę, mikser, tempo i tonację. Kopiowanie części przenosi też jej tempo i tonację. Kropka przy literze oznacza, że część ma nagrania.</li>
         <li><strong>Kopiowanie części:</strong> przycisk z dwoma kwadracikami obok liter kopiuje całą bieżącą część (ślady, pętlę, mikser) do innej. Potem podmieniasz w kopii tylko tę partię, którą chcesz zmienić.</li>
@@ -406,6 +429,7 @@ body.recording #tracks .trk-name{pointer-events:none;opacity:.45}
         <li><strong>Sesje:</strong> stuknij nazwę sesji na górze, żeby otworzyć listę, założyć nową, zrobić kopię albo wysłać sesję jako plik na drugie urządzenie. Wszystko zapisuje się samo.</li>
         <li><strong>Eksportuj MP3</strong> zgrywa wszystko tak, jak słyszysz. W menu udostępniania wybierz Messengera albo Zachowaj w Plikach.</li>
         <li><strong>Kopia zapasowa</strong> (menu ☰ → Ustawienia) zapisuje wszystkie sesje w jednym pliku. Zrób ją przed usunięciem aplikacji z ekranu. Przywrócisz ją przyciskiem Przywróć albo przez Otwórz plik sesji.</li>
+        <li><strong>Przypomnienia o kopiach:</strong> gdy wychodzisz z sesji, w której coś zmieniłeś (albo otwierasz aplikację z taką sesją), na górze pojawi się <strong>Zapisz kopię</strong>. Stuknij i wybierz Zachowaj w Plikach. Co 7 dni Looper przypomni też o pełnej kopii wszystkich sesji. Nagrania są tylko w aplikacji, więc kopia w Plikach (najlepiej w iCloud Drive) chroni je przed utratą.</li>
         <li>Aplikacja działa bez internetu. Brak dźwięku? Sprawdź, czy telefon nie jest w trybie cichym.</li>
       </ol>
     </div>
@@ -492,7 +516,10 @@ body.recording #tracks .trk-name{pointer-events:none;opacity:.45}
   <section id="card" class="card" aria-label="Przebieg">
     <div class="wave-row">
       <div id="recdots" class="recdots" aria-label="Nagrywanie do śladów" hidden></div>
-      <canvas id="wave" aria-label="Przebieg nagrań. Przeciągnij palcem, aby zaznaczyć pętlę. Stuknij, aby przewinąć. Przeciągnij znacznik A lub B, aby go przesunąć."></canvas>
+      <div class="wave-box">
+        <canvas id="wave" aria-label="Przebieg nagrań. Przeciągnij palcem, aby zaznaczyć pętlę. Stuknij, aby przewinąć. Przeciągnij znacznik A lub B, aby go przesunąć."></canvas>
+        <canvas id="playline" class="playline" aria-hidden="true"></canvas>
+      </div>
       <div id="mixer" class="mixer" aria-label="Mikser"></div>
     </div>
     <p id="shiftNote" class="shift-note" hidden></p>
@@ -536,6 +563,7 @@ body.recording #tracks .trk-name{pointer-events:none;opacity:.45}
           <button id="tuneA" class="btn" type="button" aria-pressed="true">A</button>
           <button id="tuneB" class="btn" type="button" aria-pressed="false">B</button>
         </div>
+        <div id="seam" class="seam" role="slider" tabindex="0" aria-label="Lupa przejścia: zapętla końcówkę pętli razem z jej początkiem" aria-valuemin="0" aria-valuemax="5" aria-valuenow="0" aria-valuetext="wyłączona"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M15.2 15.2l4.8 4.8" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg><div id="seamFill" class="seam-fill"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M15.2 15.2l4.8 4.8" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></div></div>
         <div class="nudges">
           <button class="btn" type="button" data-d="-0.1" aria-label="Wcześniej o 0,1 s">← 0,1 s</button>
           <button class="btn" type="button" data-d="-0.01" aria-label="Wcześniej o 0,01 s">← 0,01</button>
@@ -837,6 +865,7 @@ let renderDirty = false;
 let playR = null;
 let srcs = [], gains = {}, token = 0;
 let playing = false, t0 = 0, off0 = 0, curLoop = null, paused = 0;
+let seamLen = 0, curSeam = null;      // seam magnifier: seconds of listening around B→A (0 = off), live schedule
 let A = null, B = null, loopOn = true, tune = 'A', zoomed = false, shiftId = null, locked = false;
 let view = { s: 0, e: 1 };
 let lanes = [], drag = null, raf = 0, msgTimer = 0, lockMsgAt = 0;
@@ -1049,6 +1078,8 @@ let storageWarned = false;
 function saveSlotData(s){
   if (curSid == null) return;
   const key = dKey(curSid, s.id);
+  const m = sessMeta(curSid);
+  if (m) m.edited = Date.now();
   const p = hasContent(s) ? DB.put(key, slotSrc(s)) : DB.del(key);
   p.catch(() => {
     if (!storageWarned){ storageWarned = true; say('Nie udało się zapamiętać nagrania (brak miejsca?). Wszystko działa, tylko po zamknięciu trzeba je wczytać ponownie.', true); }
@@ -1075,6 +1106,7 @@ function applyPart(k){
   paused = p.paused || 0; tune = p.tune || 'A'; lastRec = p.lastRec || null;
   tempoPct = p.tempoPct || 0; semi = p.semi || 0;
   shiftId = null; zoomed = false; drag = null; armed = null;
+  seamLen = 0;
 }
 function initParts(){ parts = {}; for (const k of PARTS) parts[k] = blankPart(); curPart = 'A'; applyPart('A'); }
 const partHas = (k) => parts[k] && parts[k].slots.some(hasContent);
@@ -1092,11 +1124,24 @@ function stateObj(){
   return { v: 4, nextId, tempoPct, semi, curPart, playMode, sequence: sequence.map((x) => ({ p: x.p, n: x.n })), parts: ps };
 }
 const allSlots = () => { stashPart(); const out = []; for (const k of PARTS) for (const s of parts[k].slots) out.push(s); return out; };
+/* What counts as a change worth a backup: recordings, loops, mixer, tempo, sequence (not just listening). */
+function hashStr(t){ let h = 0x811c9dc5; for (let i = 0; i < t.length; i++){ h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); }
+function contentSig(st){
+  const ps = PARTS.map((k) => { const p = st.parts[k]; return [p.A, p.B, p.loopOn, p.tempoPct, p.semi, p.slots.map((x) => [x.id, x.name, x.vol, x.trim, x.offset, x.has, x.mute, x.solo])]; });
+  return hashStr(JSON.stringify([ps, st.sequence]));
+}
+function noteEdits(m, st){
+  const sig = contentSig(st);
+  if (m.sig === sig) return;
+  if (m.sig != null) m.edited = Date.now();
+  else if (m.edited == null) m.edited = m.updated || Date.now();   // older session: changes of unknown age
+  m.sig = sig;
+}
 function writeState(){
   if (curSid == null) return Promise.resolve();
   const st = stateObj();
   const m = sessMeta(curSid);
-  if (m){ m.updated = Date.now(); m.tracks = allSlots().filter(hasContent).length; }
+  if (m){ noteEdits(m, st); m.updated = Date.now(); m.tracks = allSlots().filter(hasContent).length; }
   return Promise.all([DB.put(stKey(curSid), st), saveIndex()]).catch(() => {});
 }
 function scheduleSave(now){
@@ -1226,12 +1271,18 @@ function pos(){
   }
   if (!playing || !ctx || !playR) return paused;
   const lat = ctx.outputLatency || 0;
+  if (curSeam){
+    let x = curSeam.b - curSeam.h + Math.max(0, ctx.currentTime - curSeam.t0 - lat) % curSeam.rep;
+    if (x >= curSeam.b) x = curSeam.a + (x - curSeam.b);
+    return Math.min(x * playR.T, playR.D);
+  }
   let b = off0 + Math.max(0, ctx.currentTime - t0 - lat);
   if (curLoop && b >= curLoop.b) b = curLoop.a + (b - curLoop.a) % (curLoop.b - curLoop.a);
   return Math.min(b * playR.T, playR.D);
 }
 
 function killSources(){
+  if (curSeam){ clearInterval(curSeam.timer); curSeam = null; }
   if (!srcs.length) return;
   token++;
   const n = ctx.currentTime;
@@ -1262,7 +1313,21 @@ function startAt(tau, opts){
   offB = clamp(offB, 0, Math.max(0, R.dur - 0.001));
   const when = Math.max(c.currentTime, opts.when || 0);
   const my = ++token;
-  for (const s of playingSlots()){
+  const seam = curLoop && seamLen > 0 && playMode === 'part' ? seamPlan(curLoop) : null;
+  if (seam){
+    const list = playingSlots();
+    if (!list.length){ ui(); return false; }
+    for (const s of list){
+      const gn = c.createGain();
+      gn.connect(getMaster());
+      gn.gain.setValueAtTime(0, when);
+      gn.gain.linearRampToValueAtTime(opts.muteId === s.id ? 0 : effGain(s), when + 0.006);
+      gains[s.id] = gn;
+    }
+    curSeam = Object.assign(seam, { t0: when, next: when, R, list, items: [], timer: 0 });
+    seamSchedule();
+    curSeam.timer = setInterval(seamSchedule, 60);
+  } else for (const s of playingSlots()){
     const src = c.createBufferSource();
     src.buffer = R.bufs[s.id];
     const gn = c.createGain();
@@ -1275,7 +1340,7 @@ function startAt(tau, opts){
     srcs.push(src); gains[s.id] = gn;
   }
   if (!srcs.length){ ui(); return false; }
-  srcs[0].onended = () => {
+  if (!curSeam) srcs[0].onended = () => {
     if (my !== token) return;
     srcs = []; gains = {};
     playing = false;
@@ -1297,6 +1362,98 @@ function startAt(tau, opts){
   }
   return true;
 }
+
+/* Seam magnifier: instead of the whole loop, play just its last h seconds and its first h seconds
+   (h = half of the slider), over and over, so the B → A join can be fine-tuned by ear.
+   The join itself is the very same native loop wrap as in the real loop; only the jump back
+   from just after A to just before B gets a short crossfade. */
+const SEAM_MAX = 5, SEAM_X = 0.008;
+function seamPlan(lp){
+  const len = lp.b - lp.a, h = Math.min(seamLen / 2, len / 2);
+  if (2 * h >= len - 0.02) return null;          // loop shorter than the magnifier: play it whole
+  return { a: lp.a, b: lp.b, h, rep: 2 * h };
+}
+function seamSchedule(){
+  const z = curSeam;
+  if (!z || !ctx) return;
+  const c = ctx, horizon = c.currentTime + 0.8, x = Math.min(SEAM_X, z.rep / 4);
+  let guard = 0;
+  while (z.next < horizon && guard++ < 256){
+    const t = z.next, first = !z.items.length;
+    const s0 = first ? t : t - x / 2, end = t + z.rep + x / 2;
+    for (const s of z.list){
+      const buf = z.R.bufs[s.id], gn = gains[s.id];
+      if (!buf || !gn) continue;
+      const src = c.createBufferSource();
+      src.buffer = buf; src.loop = true; src.loopStart = z.a; src.loopEnd = z.b;
+      const env = c.createGain();
+      env.gain.setValueAtTime(0, s0);
+      env.gain.linearRampToValueAtTime(1, t + x / 2);
+      env.gain.setValueAtTime(1, t + z.rep - x / 2);
+      env.gain.linearRampToValueAtTime(0, end);
+      src.connect(env); env.connect(gn);
+      src.start(s0, z.b - z.h - (t - s0));
+      src.stop(end + 0.002);
+      z.items.push({ nodes: [src, env], end });
+    }
+    z.next += z.rep;
+  }
+  const old = c.currentTime - 0.5;
+  z.items = z.items.filter((it) => {
+    if (it.end >= old) return true;
+    it.nodes.forEach((n) => { try { n.disconnect(); } catch (e) {} });
+    return false;
+  });
+  srcs = z.items.map((it) => it.nodes[0]);
+}
+const seamUsable = () => playMode === 'part' && A != null && B != null && loopOn;
+function renderSeam(){
+  const el = $('seam');
+  $('seamFill').style.width = (seamLen / SEAM_MAX * 100) + '%';
+  el.setAttribute('aria-valuenow', seamLen.toFixed(2));
+  el.setAttribute('aria-valuetext', seamLen > 0 ? secs(seamLen) : 'wyłączona');
+  el.setAttribute('aria-disabled', String(!seamUsable()));
+}
+function setSeam(v, apply){
+  const was = seamLen;
+  seamLen = v < 0.05 ? 0 : Math.round(clamp(v, 0, SEAM_MAX) * 100) / 100;
+  renderSeam();
+  if (apply && (seamLen !== was || apply === 'force')){ if (playing) startAt(pos()); ui(); }
+}
+let seamDrag = null;
+const seamEl = $('seam');
+seamEl.addEventListener('pointerdown', (e) => {
+  if (!seamUsable() || rec || recStarting) return;
+  try { seamEl.setPointerCapture(e.pointerId); } catch (err) {}
+  seamDrag = { x0: e.clientX, v0: seamLen, span: Math.max(200, seamEl.clientWidth), moved: false };
+  seamEl.classList.add('dragging');
+});
+seamEl.addEventListener('pointermove', (e) => {
+  if (!seamDrag) return;
+  const dx = e.clientX - seamDrag.x0;
+  if (!seamDrag.moved && Math.abs(dx) < 3) return;
+  seamDrag.moved = true;
+  setSeam(seamDrag.v0 + dx / seamDrag.span * SEAM_MAX);
+});
+const endSeam = () => {
+  const d = seamDrag; seamDrag = null;
+  seamEl.classList.remove('dragging');
+  if (d && d.moved) setSeam(seamLen, 'force');
+};
+seamEl.addEventListener('pointerup', endSeam);
+seamEl.addEventListener('pointercancel', endSeam);
+seamEl.addEventListener('keydown', (e) => {
+  if (!seamUsable()) return;
+  const k = e.key;
+  let v = null;
+  if (k === 'ArrowRight' || k === 'ArrowUp') v = seamLen + 0.25;
+  else if (k === 'ArrowLeft' || k === 'ArrowDown') v = seamLen - 0.25;
+  else if (k === 'Home') v = 0;
+  else if (k === 'End') v = SEAM_MAX;
+  if (v == null) return;
+  e.preventDefault();
+  setSeam(v, true);
+});
 
 function pause(){
   paused = pos();
@@ -1465,11 +1622,48 @@ async function startSeq(g){
   } finally { seqStarting = false; }
 }
 function pauseSeq(){
+  const cur = seqCurrent();
   seqPausedG = seqPosG();
   stopSeqNodes();
   seqPlaying = false;
   keepAwake(false);
+  if (cur) showSeqPlace(cur.seg.part, cur.tau, cur.seg);
   ui();
+}
+// Paused sequence: the view shows where ▶ will continue (part, play line, time, highlighted block).
+function showSeqPlace(k, tau, seg){
+  if (k !== curPart) switchPart(k, { instant: true });
+  if (k !== curPart) return;
+  paused = tau;
+  stashPart();
+  updateSeqChips({ seg });
+}
+// Where a sequence position g (seconds of listening) falls, worked out from loops and tempos
+// (no render needed, so it also works for parts that are not prepared yet).
+function seqLocate(g){
+  stashPart();
+  const plan = [];
+  let total = 0;
+  sequence.forEach((st, idx) => {
+    const p = parts[st.p];
+    if (!p || !partHas(st.p)) return;
+    const T = partT(st.p);
+    let a = 0, b = p.slots.filter(hasContent).reduce((d, s) => Math.max(d, s.offset + s.dur), 0.1);
+    if (p.loopOn !== false && p.A != null && p.B != null && p.B - p.A >= MIN_LOOP){ a = p.A; b = p.B; }
+    const len = (b - a) / T;
+    if (len <= 0.02) return;
+    plan.push({ idx, p: st.p, n: st.n, a, len, gstart: total, T });
+    total += len * st.n;
+  });
+  if (!plan.length) return null;
+  g = Math.max(0, g);
+  if (g >= total) g %= total;
+  let st = plan[plan.length - 1];
+  for (const x of plan){ if (g < x.gstart + x.len * x.n){ st = x; break; } }
+  const off = Math.max(0, g - st.gstart);
+  const r = Math.min(st.n - 1, Math.floor(off / st.len));
+  const tau = st.a + clamp(off - r * st.len, 0, st.len) * st.T;
+  return { g, part: st.p, tau, seg: { idx: st.idx, r, n: st.n } };
 }
 function restartSeqKeepingPlace(){
   if (!seqPlaying || !seq) return;
@@ -1556,7 +1750,7 @@ function toggleLoop(){
 function clearLoop(){
   if (locked){ lockedMsg(); return; }
   const p = pos();
-  A = null; B = null; tune = 'A';
+  A = null; B = null; tune = 'A'; seamLen = 0;
   if (zoomed){ zoomed = false; resetView(); }
   if (playing) startAt(p); else paused = p;
   ui();
@@ -1571,7 +1765,13 @@ function toStart(){
 function skip(d){
   if (playMode === 'seq'){
     if (seqPlaying) startSeq(seqPosG() + d);
-    else { seqPausedG = Math.max(0, seqPausedG + d); }
+    else {
+      const at = seqLocate(seqPausedG + d);
+      if (!at){ seqPausedG = Math.max(0, seqPausedG + d); return; }
+      seqPausedG = at.g;
+      showSeqPlace(at.part, at.tau, at.seg);
+      ui();
+    }
     return;
   }
   if (!content().length) return;
@@ -1999,7 +2199,7 @@ function toggleZoom(){
 }
 
 function buildPeaks(){
-  lanes = [];
+  lanes = []; peaksGen++;
   if (!canvas.width || !canvas.clientWidth) return;
   const dpr = canvas.width / canvas.clientWidth;
   const step = 3 * dpr;
@@ -2031,7 +2231,7 @@ function buildPeaks(){
 function tToX(t, w){ return (t - view.s) / (view.e - view.s) * w; }
 function xToT(x, w){ return clamp(view.s + (x / w) * (view.e - view.s), 0, timelineDur()); }
 
-function roundRect(x, y, w, h, r){
+function roundRect(g, x, y, w, h, r){
   g.beginPath();
   g.moveTo(x + r, y); g.lineTo(x + w - r, y); g.quadraticCurveTo(x + w, y, x + w, y + r);
   g.lineTo(x + w, y + h - r); g.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
@@ -2040,14 +2240,44 @@ function roundRect(x, y, w, h, r){
   g.closePath();
 }
 
+/* Battery: the waveform canvas (lanes, loop, flags) is redrawn only when something on it changes;
+   the play line lives on a transparent canvas on top, so each frame touches just a thin strip. */
+const pcv = $('playline');
+const pg = pcv.getContext('2d');
+let layerSig = '', colors = null, peaksGen = 0, lastLine = null;
+function themeColors(){
+  if (!colors){
+    const cs = getComputedStyle(document.documentElement);
+    const col = (n) => cs.getPropertyValue(n).trim();
+    colors = { wave: col('--wave'), acc: col('--accent'), hot: col('--hot'), hotSoft: col('--hot-soft'), ink: col('--ink'), on: col('--on-accent'),
+               line: col('--line'), muted: col('--muted'), panel: col('--panel'), rec: col('--rec'), recSoft: col('--rec-soft') };
+    colors.key = Object.values(colors).join('|');
+  }
+  return colors;
+}
 function draw(){
   const W = canvas.width, H = canvas.height;
   if (!W) return;
-  const cs = getComputedStyle(document.documentElement);
-  const col = (n) => cs.getPropertyValue(n).trim();
-  const cWave = col('--wave'), cAcc = col('--accent'), cHot = col('--hot'), cHotSoft = col('--hot-soft'),
-        cInk = col('--ink'), cOn = col('--on-accent'), cLine = col('--line'),
-        cMuted = col('--muted'), cPanel = col('--panel'), cRec = col('--rec'), cRecSoft = col('--rec-soft');
+  const C = themeColors();
+  const sig = JSON.stringify([W, H, canvas.clientWidth, view.s, view.e, A, B, loopOn, peaksGen, rec ? rec.id : null, C.key,
+    slots.map((s) => [s.id, hasContent(s), s.vol, s.mute, s.solo, s.trim])]);
+  if (sig !== layerSig){ layerSig = sig; drawLayer(g, W, H, C); }
+  if (pcv.width !== W || pcv.height !== H){ pcv.width = W; pcv.height = H; lastLine = null; }
+  const dpr = W / canvas.clientWidth, top = 26 * dpr;
+  let line = null;
+  if (content().length > 0 || rec){
+    const xp = tToX(pos(), W);
+    if (xp >= 0 && xp <= W) line = { x: Math.round(xp - dpr), y: top - 2 * dpr, w: 2 * dpr, h: H - top + 2 * dpr, col: rec ? C.rec : C.ink };
+  }
+  const same = (p, q) => p && q && p.x === q.x && p.y === q.y && p.w === q.w && p.h === q.h && p.col === q.col;
+  if (same(line, lastLine) || (!line && !lastLine)) return;
+  if (lastLine) pg.clearRect(lastLine.x - 2, 0, lastLine.w + 4, H);
+  if (line){ pg.fillStyle = line.col; pg.fillRect(line.x, line.y, line.w, line.h); }
+  lastLine = line;
+}
+function drawLayer(g, W, H, C){
+  const cWave = C.wave, cAcc = C.acc, cHot = C.hot, cHotSoft = C.hotSoft, cOn = C.on, cLine = C.line,
+        cMuted = C.muted, cPanel = C.panel, cRecSoft = C.recSoft;
   const dpr = W / canvas.clientWidth;
   g.clearRect(0, 0, W, H);
 
@@ -2097,7 +2327,7 @@ function draw(){
       const label = String(L.idx + 1) + (volTxt ? '  ' + volTxt.trim() : '');
       const tw = g.measureText(label).width;
       g.fillStyle = cPanel;
-      roundRect(2 * dpr, y0 + 4 * dpr, tw + 10 * dpr, 16 * dpr, 4 * dpr); g.fill();
+      roundRect(g, 2 * dpr, y0 + 4 * dpr, tw + 10 * dpr, 16 * dpr, 4 * dpr); g.fill();
       g.fillStyle = cMuted;
       g.fillText(label, 7 * dpr, y0 + 12.5 * dpr);
     }
@@ -2118,7 +2348,7 @@ function draw(){
     g.fillRect(Math.round(x - dpr), top - 4 * dpr, 2 * dpr, H - top + 4 * dpr);
     const fw = 22 * dpr, fh = 20 * dpr;
     const fx = right ? x - dpr : x + dpr - fw;
-    roundRect(fx, 2 * dpr, fw, fh, 5 * dpr);
+    roundRect(g, fx, 2 * dpr, fw, fh, 5 * dpr);
     g.fill();
     g.fillStyle = cOn;
     g.fillText(label, fx + fw / 2, 2 * dpr + fh / 2 + 0.5 * dpr);
@@ -2126,14 +2356,6 @@ function draw(){
   const close = xa != null && xb != null && xb - xa < 46 * dpr;
   if (xa != null) flag(xa, 'A', !close);
   if (xb != null) flag(xb, 'B', close);
-
-  if (has || rec){
-    const xp = tToX(pos(), W);
-    if (xp >= 0 && xp <= W){
-      g.fillStyle = rec ? cRec : cInk;
-      g.fillRect(Math.round(xp - dpr), top - 2 * dpr, 2 * dpr, H - top + 2 * dpr);
-    }
-  }
 }
 
 function kick(){
@@ -2202,7 +2424,8 @@ function ui(){
   lb.setAttribute('aria-pressed', String(hasLoop && loopOn));
   lb.textContent = 'Pętla: ' + (loopOn ? 'wł.' : 'wył.');
   const ls = $('loopSummary');
-  ls.textContent = !hasLoop ? 'brak pętli' : (loopOn ? 'wł.' : 'wył.') + ' · ' + fmt(A) + '–' + fmt(B);
+  ls.textContent = !hasLoop ? 'brak pętli' : (seamLen > 0 && seamUsable() ? 'lupa' : loopOn ? 'wł.' : 'wył.') + ' · ' + fmt(A) + '–' + fmt(B);
+  renderSeam();
   ls.classList.toggle('changed', hasLoop && loopOn);
   const canPlay = playMode === 'seq' ? PARTS.some(partHas) : has;
   document.querySelectorAll('[data-skip]').forEach((b) => { b.disabled = !canPlay; });
@@ -2289,6 +2512,7 @@ function setPlayMode(m){
   if (seqPlaying) pauseSeq();
   if (playing) pause();
   playMode = m;
+  if (m === 'seq') seamLen = 0;
   clearSeqChips();
   if (m === 'seq' && !sequence.length) say('Dodaj klocek do sekwencji przyciskiem +.');
   else if (m === 'seq') say('Tryb sekwencji: ▶ gra klocki po kolei.');
@@ -2479,7 +2703,7 @@ async function restoreBackup(buf){
     await DB.put(stKey(sid), ss.state);
     let name = ss.name || 'Sesja';
     if (sessions.list.some((x) => x.name === name)) name += ' (z kopii)';
-    sessions.list.push({ sid, name, created: ss.created || Date.now(), updated: ss.updated || Date.now(), tracks: ss.tracks || 0 });
+    sessions.list.push({ sid, name, created: ss.created || Date.now(), updated: ss.updated || Date.now(), tracks: ss.tracks || 0, edited: Date.now(), copied: Date.now() });
     n++;
   }
   await saveIndex();
@@ -2499,15 +2723,18 @@ async function openLooperFile(file){
   if (magic === 'LOOPERS1') return importSessionFile(file);
   say('To nie jest plik Loopera (sesji ani kopii zapasowej).', true);
 }
+const fullBackupName = () => { const d = new Date(); return 'Looper kopia ' + d.getDate() + '.' + (d.getMonth() + 1) + '.' + d.getFullYear() + '.looper'; };
+let backupAt = 0;
 $('backupBtn').addEventListener('click', async () => {
   const b = $('backupBtn');
   if (backupBlob){
-    const d = new Date();
-    shareBlob(backupBlob, 'Looper kopia ' + d.getDate() + '.' + (d.getMonth() + 1) + '.' + d.getFullYear() + '.looper', 'application/octet-stream');
+    const at = backupAt;
+    if (await shareBlob(backupBlob, fullBackupName(), 'application/octet-stream')) markFull(at);
     return;
   }
   b.disabled = true; b.textContent = 'Przygotowuję…';
   try {
+    backupAt = Date.now();
     backupBlob = await buildBackup();
     b.textContent = 'Udostępnij kopię (' + (backupBlob.size / 1e6).toFixed(1).replace('.', ',') + ' MB)';
     clearTimeout(backupTimer);
@@ -2520,6 +2747,112 @@ $('backupBtn').addEventListener('click', async () => {
 });
 $('restoreBtn').addEventListener('click', () => $('restoreIn').click());
 $('restoreIn').addEventListener('change', (e) => { const f = e.target.files && e.target.files[0]; e.target.value = ''; openLooperFile(f); });
+
+/* ---------- backup reminders: a copy of a session when leaving it (or at start), full backup every 7 days ---------- */
+const DAY = 86400000, FULL_EVERY = 7 * DAY;
+let bk = null;                        // the bar: { kind: 'session' | 'full', sid, blob, at, building, waiting }
+const editedAt = (m) => m.edited != null ? m.edited : (m.updated || 0);
+const needsCopy = (m) => !!m && (m.tracks || 0) > 0 && editedAt(m) > (m.copied || 0) && editedAt(m) > (m.snoozed || 0);
+function backupInfo(){
+  if (!sessions.backup) sessions.backup = { lastFull: 0, since: Date.now(), snoozeUntil: 0 };
+  return sessions.backup;
+}
+function fullDue(){
+  const b = backupInfo(), now = Date.now();
+  if (now - Math.max(b.lastFull || 0, b.since || 0) < FULL_EVERY || now < (b.snoozeUntil || 0)) return false;
+  return sessions.list.some((m) => (m.tracks || 0) > 0 && editedAt(m) > (b.lastFull || 0));
+}
+const dateStr = (t) => { const d = new Date(t); return d.getDate() + '.' + (d.getMonth() + 1) + '.' + d.getFullYear(); };
+function agoStr(t){
+  const a = new Date(t), b = new Date();
+  const days = Math.round((new Date(b.getFullYear(), b.getMonth(), b.getDate()) - new Date(a.getFullYear(), a.getMonth(), a.getDate())) / DAY);
+  return days <= 0 ? 'dziś' : days === 1 ? 'wczoraj' : days + ' dni temu';
+}
+function renderBackupLast(){
+  const b = backupInfo();
+  $('backupLast').textContent = b.lastFull ? 'Ostatnia: ' + dateStr(b.lastFull) + ' (' + agoStr(b.lastFull) + ').' : 'Ostatnia: jeszcze nie było.';
+}
+function offerBackup(sid){
+  const m = sid != null ? sessMeta(sid) : null;
+  if (needsCopy(m)) showBk({ kind: 'session', sid });
+  else if (!bk && fullDue()) showBk({ kind: 'full' });
+}
+function showBk(o){
+  const my = bk = Object.assign({ blob: null, at: 0, building: false, waiting: false }, o);
+  if (o.kind === 'session'){
+    const m = sessMeta(o.sid);
+    $('bkText').textContent = 'Sesja „' + m.name + '” ' + (m.copied ? 'ma zmiany bez kopii.' : 'nie ma jeszcze kopii.');
+    $('bkLater').textContent = 'Nie teraz';
+    bkBuild(my);                       // ready in the background, so one tap opens the share sheet
+  } else {
+    const b = backupInfo();
+    $('bkText').textContent = b.lastFull ? 'Ostatnia pełna kopia zapasowa: ' + agoStr(b.lastFull) + '.' : 'Nie masz jeszcze pełnej kopii zapasowej wszystkich sesji.';
+    $('bkLater').textContent = 'Później';
+  }
+  $('bkSave').textContent = 'Zapisz kopię';
+  $('bkSave').disabled = false;
+  $('bkBar').hidden = false;
+}
+function hideBk(){ bk = null; $('bkBar').hidden = true; }
+async function bkBuild(o){
+  o.building = true; o.blob = null;
+  try {
+    o.at = Date.now();
+    if (o.kind === 'session'){ await writeIfOpen(o.sid); o.at = Date.now(); o.blob = await sessionFileFromDB(o.sid); }
+    else o.blob = await buildBackup();
+  } catch (e) {
+    if (bk === o){ hideBk(); say('Nie udało się przygotować kopii.', true); }
+    return;
+  }
+  o.building = false;
+  if (bk !== o) return;
+  const b = $('bkSave');
+  b.disabled = false;
+  if (o.waiting) b.textContent = 'Udostępnij kopię (' + (o.blob.size / 1e6).toFixed(1).replace('.', ',') + ' MB)';
+}
+async function writeIfOpen(sid){ if (sid === curSid){ clearTimeout(saveTimer); await writeState(); } }
+function markCopied(sid, at){
+  const m = sessMeta(sid);
+  if (m){ m.copied = Math.max(m.copied || 0, at); m.snoozed = null; }
+  saveIndex();
+}
+function markFull(at){
+  const b = backupInfo();
+  b.lastFull = at; b.snoozeUntil = 0;
+  for (const m of sessions.list){ m.copied = Math.max(m.copied || 0, at); m.snoozed = null; }
+  saveIndex();
+  renderBackupLast();
+  if (bk) hideBk();
+}
+$('bkSave').addEventListener('click', async () => {
+  const o = bk;
+  if (!o) return;
+  const stale = o.kind === 'session' && o.blob && editedAt(sessMeta(o.sid) || {}) > o.at;
+  if (o.blob && !stale){
+    const name = o.kind === 'session' ? safeName((sessMeta(o.sid) || {}).name || 'Sesja') + '.looper' : fullBackupName();
+    if (!(await shareBlob(o.blob, name, 'application/octet-stream'))) return;   // share sheet closed: the bar stays
+    if (o.kind === 'session'){
+      markCopied(o.sid, o.at);
+      if (bk === o) hideBk();
+      say('Kopia sesji gotowa.');
+      offerBackup(null);
+    } else { markFull(o.at); say('Pełna kopia zapasowa gotowa.'); }
+    return;
+  }
+  // not ready yet (or the session changed since): prepare, then one more tap shares it
+  o.waiting = true;
+  $('bkSave').disabled = true; $('bkSave').textContent = 'Przygotowuję…';
+  if (!o.building) bkBuild(o);
+});
+$('bkLater').addEventListener('click', () => {
+  const o = bk;
+  if (!o) return;
+  if (o.kind === 'session'){ const m = sessMeta(o.sid); if (m) m.snoozed = editedAt(m); }
+  else backupInfo().snoozeUntil = Date.now() + DAY;
+  saveIndex();
+  hideBk();
+});
+$('menuBtn').addEventListener('click', renderBackupLast);
 
 /* ---------- sessions ---------- */
 function resetRuntime(){
@@ -2618,6 +2951,7 @@ const stSlotIds = (st) => {
 
 async function switchSession(sid){
   if (rec || sid === curSid) return;
+  const left = curSid;
   clearTimeout(saveTimer); await writeState();
   restoring = true;
   say('Otwieram sesję…', false, true);
@@ -2626,14 +2960,16 @@ async function switchSession(sid){
   await writeState();
   afterLoad();
   say('Otwarta sesja „' + (sessMeta(sid) || {}).name + '”.');
+  offerBackup(left);
 }
 
 async function newSession(name){
   if (rec) return;
+  const left = curSid;
   clearTimeout(saveTimer); await writeState();
   const sid = sessions.nextSid++;
   const now = Date.now();
-  sessions.list.push({ sid, name: name || defaultSessName(), created: now, updated: now, tracks: 0 });
+  sessions.list.push({ sid, name: name || defaultSessName(), created: now, updated: now, tracks: 0, edited: 0, copied: 0 });
   restoring = true;
   resetRuntime();
   curSid = sid; sessions.current = sid;
@@ -2641,6 +2977,7 @@ async function newSession(name){
   restoring = false;
   await writeState();
   afterLoad();
+  offerBackup(left);
   return sid;
 }
 
@@ -2654,12 +2991,14 @@ async function copySession(){
   await DB.put(stKey(sid), st);
   const all = allSlots().filter(hasContent);
   for (const s of all) await DB.put(dKey(sid, s.id), slotSrc(s));
-  sessions.list.push({ sid, name: (m ? m.name : 'Sesja') + ' (kopia)', created: now, updated: now, tracks: all.length });
+  sessions.list.push({ sid, name: (m ? m.name : 'Sesja') + ' (kopia)', created: now, updated: now, tracks: all.length,
+                      edited: m ? editedAt(m) : now, copied: m ? (m.copied || 0) : 0 });
   await saveIndex();
   await switchSession(sid);
 }
 
 async function deleteSession(sid){
+  if (bk && bk.sid === sid) hideBk();
   const st = await DB.get(stKey(sid)).catch(() => null);
   for (const id of stSlotIds(st)) await DB.del(dKey(sid, id)).catch(() => {});
   await DB.del(stKey(sid)).catch(() => {});
@@ -2755,11 +3094,47 @@ function exportSession(){
     }
     meta.parts[k] = pm;
   }
+  const sid = curSid, at = Date.now();
+  shareBlob(sessionFile(meta, payloads), safeName(name) + '.looper', 'application/octet-stream').then((ok) => {
+    if (!ok || sid == null) return;
+    markCopied(sid, at);
+    if (bk && bk.sid === sid) hideBk();
+  });
+}
+function sessionFile(meta, payloads){
   const json = new TextEncoder().encode(JSON.stringify(meta));
   const head = new Uint8Array(12);
   head.set([76, 79, 79, 80, 69, 82, 83, 49]);
   new DataView(head.buffer).setUint32(8, json.length, true);
-  shareBlob(new Blob([head, json].concat(payloads), { type: 'application/octet-stream' }), safeName(name) + '.looper', 'application/octet-stream');
+  return new Blob([head, json].concat(payloads), { type: 'application/octet-stream' });
+}
+// The same session file, but read from storage, so it works for a session that is not open.
+async function sessionFileFromDB(sid){
+  if (sid === curSid){ clearTimeout(saveTimer); await writeState(); }
+  const m = sessMeta(sid);
+  const st = await DB.get(stKey(sid));
+  if (!st) throw new Error('nie ma takiej sesji');
+  const psrc = st.parts || { A: { A: st.A, B: st.B, loopOn: st.loopOn, locked: st.locked, slots: st.slots || [] } };
+  const meta = { format: 'looper-session', version: 2, name: m ? m.name : 'Sesja', tempoPct: st.tempoPct || 0, semi: st.semi || 0,
+                 curPart: PARTS.includes(st.curPart) ? st.curPart : 'A', playMode: st.playMode === 'seq' ? 'seq' : 'part',
+                 sequence: Array.isArray(st.sequence) ? st.sequence : [{ p: 'A', n: 1 }], parts: {} };
+  const payloads = [];
+  for (const k of PARTS){
+    const p = psrc[k];
+    if (!p) continue;
+    const pm = { A: p.A != null ? p.A : null, B: p.B != null ? p.B : null, loopOn: p.loopOn !== false, locked: !!p.locked,
+                 tempoPct: fxVal(p.tempoPct, st.tempoPct, -50, 50), semi: fxVal(p.semi, st.semi, -7, 7), tracks: [] };
+    for (const sl of (p.slots || [])){
+      const src = sl.has ? await DB.get(dKey(sid, sl.id)).catch(() => null) : null;
+      if (!src || !src.data){ pm.tracks.push({ empty: true, vol: sl.vol != null ? sl.vol : 1 }); continue; }
+      const bytes = new Uint8Array(src.data);
+      pm.tracks.push({ name: sl.name || src.name || '', vol: sl.vol != null ? sl.vol : 1, trim: sl.trim != null ? sl.trim : null, offset: sl.offset || 0,
+                       mute: !!sl.mute, solo: !!sl.solo, kind: src.kind, sr: src.sr || null, bytes: bytes.length });
+      payloads.push(bytes);
+    }
+    meta.parts[k] = pm;
+  }
+  return sessionFile(meta, payloads);
 }
 async function importSessionFile(file){
   if (!file) return;
@@ -2800,7 +3175,7 @@ async function importSessionFile(file){
     await DB.put(stKey(sid), st);
     let name = meta.name || file.name.replace(/\.[^.]+$/, '');
     if (sessions.list.some((x) => x.name === name)) name += ' (z pliku)';
-    sessions.list.push({ sid, name, created: now, updated: now, tracks: n });
+    sessions.list.push({ sid, name, created: now, updated: now, tracks: n, edited: now, copied: now });
     await saveIndex();
     await switchSession(sid);
     say('Otwarta sesja z pliku: „' + name + '”.');
@@ -3004,8 +3379,8 @@ async function shareBlob(blob, filename, type){
   let file = null;
   try { file = new File([blob], filename, { type }); } catch (e) {}
   if (file && navigator.canShare && navigator.canShare({ files: [file] })){
-    try { await navigator.share({ files: [file] }); return; }
-    catch (e) { if (e && e.name === 'AbortError') return; }
+    try { await navigator.share({ files: [file] }); return true; }
+    catch (e) { if (e && e.name === 'AbortError') return false; }
   }
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -3013,6 +3388,7 @@ async function shareBlob(blob, filename, type){
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 60000);
   say('Plik „' + filename + '” jest w Pobranych.');
+  return true;
 }
 
 function bounceUI(state){
@@ -3365,7 +3741,7 @@ document.addEventListener('drop', (e) => {
 
 /* ---------- keyboard (desktop) ---------- */
 document.addEventListener('keydown', (e) => {
-  if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+  if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.id === 'seam')) return;
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   const k = e.key;
   if (rec){ if (k === ' '){ e.preventDefault(); stopRecording(); } return; }
@@ -3397,7 +3773,7 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('pageshow', (e) => { if (e.persisted) ctxStale = true; });
 if (window.ResizeObserver) new ResizeObserver(resize).observe(canvas);
 window.addEventListener('resize', () => updateCanvasHeight());
-try { window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', draw); } catch (e) {}
+try { window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { colors = null; draw(); }); } catch (e) {}
 const netUI = () => { $('net').hidden = navigator.onLine !== false; };
 window.addEventListener('online', netUI); window.addEventListener('offline', netUI); netUI();
 
@@ -3433,6 +3809,8 @@ setLoopCollapsed(loopCollapsed);
   restoring = false;
   await writeState();
   afterLoad();
+  renderBackupLast();
+  offerBackup(curSid);
 })();
 })();
 </script>

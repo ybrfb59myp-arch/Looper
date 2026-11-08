@@ -2,6 +2,16 @@
 
 Najnowsze na górze. Daty i godziny według czasu polskiego.
 
+## 2026-11-08 (wieczór)
+- **Lupa przejścia** w karcie Pętla: pozioma pigułka obok Dostrój A/B (0 = wyłączona, do 5 s). Gra w kółko końcówkę
+  pętli i zaraz po niej jej początek, bez ciszy, żeby dostroić samo przejście B→A. Strzałki dostrajania w osobnym rzędzie.
+- **Przypomnienia o kopiach:** po wyjściu z sesji ze zmianami (i przy starcie aplikacji) pasek „Zapisz kopię” z kopią
+  tej sesji przygotowaną w tle; co 7 dni przypomnienie o pełnej kopii; w Ustawieniach data ostatniej pełnej kopii.
+- **Sekwencja na pauzie:** pauza pokazuje miejsce zatrzymania (wcześniej czas wracał do A), a −10/−5/+5/+10 przesuwają
+  widok na właściwą część z czasem i podświetlonym klockiem.
+- **Mniej baterii przy graniu:** przebieg rysowany raz, co klatkę tylko kreska pozycji na osobnej warstwie
+  (obraz bez zmian).
+
 ## 2026-11-08
 - Menu ☰ w prawym górnym rogu: tam przeniesione **Ustawienia** i **Jak to działa** (zniknęły z dołu strony).
 - Chowanie miksera przyciskiem z suwakami obok czasu; przebiegi zajmują wtedy całą szerokość.

@@ -1,5 +1,5 @@
 // Looper: offline cache. Bump VERSION on every release so phones pick up the new files.
-const VERSION = '20261108-134031';
+const VERSION = '20261108-183125';
 const CACHE = 'looper-' + VERSION;
 const ASSETS = ['./', './index.html', './rec-worklet.js', './mp3-worker.js', './lame.min.js', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png'];
 

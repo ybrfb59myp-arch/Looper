@@ -47,7 +47,7 @@ w razie potrzeby poproś właściciela o kliknięcie w Settings → Pages.
 
 | Ścieżka | Co to jest |
 |---|---|
-| `src/looper.html` | Cała aplikacja: HTML, CSS i JS (jeden plik, ok. 3100 linii). Zawiera znaczniki `/*DSP*/` i `/*MP4*/`. |
+| `src/looper.html` | Cała aplikacja: HTML, CSS i JS (jeden plik, ok. 3500 linii). Zawiera znaczniki `/*DSP*/` i `/*MP4*/`. |
 | `src/dsp.js` | Zmiana tempa i tonacji: `resampleLen`, `resampleGen`, `alignCopy`, `wsolaGen`. Wklejane w miejsce `/*DSP*/`. |
 | `src/mp4audio.js` | `mp4AacToAdts`: wyciąga dźwięk AAC z filmów MP4/MOV. Wklejane w miejsce `/*MP4*/`. |
 | `src/sw.js` | Szablon service workera z `__VERSION__`. |
@@ -84,6 +84,13 @@ komentarzami `/* ---------- nazwa ---------- */`.
   `loop/loopStart/loopEnd`, punkty przyciągane do przejść przez zero (`snapIn`).
 - `navigator.audioSession.type`: `'playback'`, a na czas nagrywania `'play-and-record'` (`setSession`).
 - Wake lock podczas grania (`keepAwake`).
+- **Lupa przejścia** (`seamLen` 0…5 s czasu słuchania, 0 = wył.; `curSeam`): gdy jest włączona pętla w trybie Część,
+  `startAt` zamiast jednego źródła na ślad planuje powtórzenia (`seamSchedule`, setInterval 60 ms, horyzont 0,8 s).
+  Każde powtórzenie to źródło z tym samym `loop/loopStart/loopEnd` co zwykła pętla, startujące w B−h i grające 2h
+  (h = seamLen/2), więc samo przejście B→A jest **identyczne** z prawdziwą pętlą. Tylko skok z A+h z powrotem do
+  B−h ma krzyżowe przenikanie 8 ms (`SEAM_X`), bez ciszy. Pętla krótsza niż lupa: gra cała. `pos()` liczy pozycję
+  w oknach lupy. Wartość nie jest zapamiętywana: zeruje się w `applyPart` (zmiana części, otwarcie sesji),
+  po „Usuń pętlę” i w trybie Sekwencja.
 - **Powrót z tła (iOS):** po schowaniu aplikacji odtwarzanie i nagrywanie są zatrzymywane, a stan zapisany.
   Po powrocie (ukrycie > 400 ms) `ctxStale = true`; pierwsze dotknięcie (`wakeAudio`) tworzy nowy kontekst
   (`freshCtx`). Dodatkowo strażnik `watchClock`: jeśli po starcie zegar kontekstu stoi 800 ms, odtwarzanie
@@ -111,6 +118,10 @@ komentarzami `/* ---------- nazwa ---------- */`.
 - Kopiowanie części (`copyPart`): ślady (nowe id, te same dane), pętla, mikser, tempo i tonacja.
   Gdy cel ma nagrania, drugie stuknięcie „Zastąpić B?” (4 s).
 - Wybór liczby powtórzeń: koło w stylu zegara iOS (`wheelPart`, `wheelCount`, `ITEM_H = 40`).
+- **Sekwencja na pauzie:** `pauseSeq` przełącza widok na część, która grała, i ustawia jej `paused` na miejsce
+  zatrzymania (`showSeqPlace`). Przeskoki −10/−5/+5/+10 na pauzie liczą miejsce przez `seqLocate(g)` (z pętli i temp,
+  bez renderu; powyżej końca sekwencji zawija, poniżej zera staje na początku) i pokazują część, kreskę, czas
+  i podświetlony klocek z licznikiem.
 
 ### Nagrywanie
 - `rec-worklet.js` wysyła paczki po 4096 próbek z numerem ramki; nagranie jest układane na osi czasu
@@ -129,6 +140,10 @@ komentarzami `/* ---------- nazwa ---------- */`.
 - Suwaki w dB: pozycja 0,75 = 0 dB, zakres −48…+12 dB (`posToVol`, `volToPos`, `dbLabel`), dwuklik = 0 dB,
   cały pasek jest uchwytem, zakres ruchu min. 180 px, dymek z wartością. M/S jak w mikserze.
 - Przebieg rysowany w rzeczywistej skali (po `trim` i suwaku), żeby różnice głośności były widoczne.
+- **Rysowanie (bateria):** `#wave` (ślady, pętla, flagi A/B) jest przerysowywany tylko wtedy, gdy zmieni się jego
+  podpis (`layerSig`: rozmiar, widok, A/B, `peaksGen` z `buildPeaks`, mikser, kolory motywu w `themeColors`).
+  Kreska pozycji jest na osobnym przezroczystym `#playline` nad przebiegiem (`pointer-events:none`), czyszczonym
+  tylko w pasku poprzedniej kreski. Obraz jest identyczny jak dawniej (sprawdzone porównaniem pikseli).
 
 ### Dane i pliki
 - IndexedDB `petla-ab`, magazyn `kv` (`DB.get/put/del`). Klucze:
@@ -142,6 +157,17 @@ komentarzami `/* ---------- nazwa ---------- */`.
   v2 (`state2`), v3 (jedna część) i v4 bez tempa w częściach, gdzie każda część dziedziczy wspólne tempo.
 - Ustawienia w localStorage: `looper.learnMs`, `looper.preroll`, `looper.fxCollapsed`, `looper.tracksCollapsed`,
   `looper.seqCollapsed`, `looper.loopCollapsed`, `looper.mixHidden`.
+- **Przypomnienia o kopiach** (dane w indeksie `sessions`): każda sesja na liście ma `edited` (czas ostatniej prawdziwej
+  zmiany: `noteEdits` porównuje skrót `contentSig` stanu, czyli pętle, mikser, tempo, ślady i sekwencję; samo słuchanie,
+  zmiana części czy kłódka się nie liczą; `saveSlotData` też ustawia `edited`), `sig`, `copied` (czas kopii, która ją
+  obejmuje) i `snoozed` (`edited` w chwili „Nie teraz”). Sesja bez `edited` (sprzed tej wersji) ma zmiany od `updated`.
+  `sessions.backup = { lastFull, since, snoozeUntil }`. Pasek `#bkBar` (`offerBackup`): po wyjściu z sesji
+  (`switchSession`, `newSession`) i przy starcie dla otwartej sesji, jeśli `needsCopy`; plik sesji jest przygotowywany
+  od razu w tle (`sessionFileFromDB`), więc zwykle wystarczy jedno stuknięcie. Jeśli nie ma potrzeby kopii sesji,
+  a od `max(lastFull, since)` minęło 7 dni i są zmiany po `lastFull`: pasek pełnej kopii (dwa kroki jak w Ustawieniach,
+  „Później” = jutro). Kopia liczy się tylko, gdy udostępnianie się udało (`shareBlob` zwraca `false` po zamknięciu okna);
+  „Wyślij sesję jako plik” też ją zalicza. Pełna kopia ustawia `copied` wszystkich sesji. Sesje z pliku, z kopii
+  zapasowej i nowe kopie sesji mają `edited = copied`. Data ostatniej pełnej kopii: `#backupLast` w Ustawieniach.
 - **Plik sesji** `.looper`: `"LOOPERS1"` + uint32 LE długość JSON + JSON (`format:'looper-session', version:2`,
   części z `tracks` i ich `bytes`) + kolejne dane nagrań.
 - **Kopia zapasowa** `.looper`: `"LOOPERB1"` + uint32 + JSON (`format:'looper-backup', version:1, sessions:[{ name,
@@ -185,6 +211,15 @@ komentarzami `/* ---------- nazwa ---------- */`.
 - **Zablokowana pętla**: przebieg ma `touch-action: pan-y`, więc ruch palcem w górę i w dół przewija stronę;
   komunikat o blokadzie pojawia się tylko po stuknięciu albo ruchu w bok. Suwaki miksera nadal reagują na
   przeciąganie (żeby przewijać tam, można schować mikser).
+- **Lupa przejścia** (2026-11-08, pomysł właściciela): pozioma „pigułka” jak suwak jasności w iOS, w karcie Pętla obok
+  Dostrój A/B (strzałki przeszły do osobnego rzędu, także na iPadzie). Bez liczb; skrajnie w lewo = wyłączona,
+  przesuwanie dokłada czas płynnie do 5 s (ruch względny, zakres ruchu min. 200 px). Gra połowę sprzed B i połowę od A,
+  **bez ciszy** między powtórzeniami (wyraźne życzenie). Działa tylko na otwartej części (nie w Sekwencji).
+  Na pasku zwiniętej karty zamiast „wł.” jest „lupa”. Działa też przy zablokowanej pętli (to tylko odsłuch).
+- **Kopie zapasowe półautomatycznie** (2026-11-08): w pełni automatyczny zapis do iCloud/Plików nie jest możliwy
+  (iOS wymaga stuknięcia, Safari nie ma zapisu plików przez stronę). Właściciel wybrał: kopia **samej opuszczanej
+  sesji** przy wyjściu z niej (i przy starcie, zamiast „przy zamknięciu”, którego nie da się obsłużyć) plus
+  przypomnienie o pełnej kopii co 7 dni. Automatyczne wysyłanie do Dropboxa/Google Drive omówione, nie wybrane.
 
 ## Ograniczenia i odpowiedzi na częste pytania
 
@@ -203,6 +238,24 @@ komentarzami `/* ---------- nazwa ---------- */`.
   nową rozmowę zaczynającą się od „Kontynuujemy Looper, przeczytaj notatki z repozytorium”.
 - Często wysyła kilka próśb jedna po drugiej (ze zrzutami ekranu i zielonymi zaznaczeniami): zbierz je,
   zrób razem i opublikuj jedną aktualizacją.
+
+## Plan: druga aktualizacja (uzgodniona 2026-11-08, jeszcze niezrobiona)
+
+Właściciel wybrał z listy propozycji punkty 6, 7, 8, 9, 11 oraz lupę przejścia. Zrobione: 7, 8, 11, lupa.
+Zostały (zaczynać po „działamy”):
+- **6. Szybsze przeliczanie tempa i tonacji:** po zmianie najpierw przeliczyć tylko to, co zaraz zagra (pętlę albo
+  najbliższe ok. 20 s), żeby dźwięk ruszył prawie od razu; resztę w tle i podmienić bez zatrzymywania grania
+  (najlepiej przy przejściu pętli). Sekwencja startuje szybciej, bo każda część potrzebuje tylko swojej pętli.
+  Nagrywanie i eksport MP3 czekają na całość. Pomiar: 3 min × 2 ślady z transpozycją ≈ 1,2 s na szybkim komputerze.
+  Uwaga: WSOLA jest stanowa, więc lepiej osobny krótki render okna pętli (z zapasem), a potem pełny render ciągły,
+  niż sklejanie kawałków.
+- **9. Powiększanie przebiegu dwoma palcami:** rozsunięcie = powiększenie w tym miejscu, zsunięcie = pomniejszenie;
+  przesuwanie powiększonego widoku dwoma palcami w bok; jeden palec działa jak dotąd (pętla, A/B, stuknięcie);
+  podczas grania widok jedzie za kreską; przycisk „Całość” w rogu przebiegu, widoczny tylko po powiększeniu;
+  działa też przy zablokowanej pętli (uwaga na `touch-action: pan-y`). Właściciel musi sprawdzić gesty na iPhonie.
+  W kodzie jest już `zoomed`/`view`/`fitZoom` po dawnym przycisku „Powiększ”.
+- Inne propozycje z listy, których nie wybrał (na później): zapisane pętle, trener tempa, strojenie w centach,
+  przerwa między powtórzeniami, pedał Bluetooth (strzałki na klawiaturze przesuwają teraz A/B), notatka do sesji.
 
 ## Rozważane i odłożone
 
