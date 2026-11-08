@@ -9,6 +9,7 @@ Prosta aplikacja do ćwiczenia z nagraniami z Dyktafonu na iPhonie i tablecie.
 - **Eksportuj MP3**: zgranie całości albo pętli do wysłania np. Messengerem
 - wczytywanie filmów z galerii (np. nagrania ekranu) — zostaje sam dźwięk
 - sesje: lista, nazwy, kopie, przesyłanie sesji jako plik `.looper`
+- części A/B/C z własnymi śladami i sekwencja (np. A×4, B×2, A×4, C×1) grana bez przerw, eksport całej sekwencji do MP3
 - kłódka blokująca pętlę, przesuwanie śladów 2–4 względem śladu 1 z zapamiętywaną poprawką nagrań
 - działa offline po dodaniu do ekranu początkowego, pamięta ostatnią sesję
 

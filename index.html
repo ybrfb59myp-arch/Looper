@@ -95,6 +95,43 @@ input[type="text"]{-webkit-user-select:text;user-select:text;-webkit-touch-callo
 .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:10px}
 .card.drop{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
 
+/* parts + sequence */
+.parts-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.part-seg .btn{min-width:52px;font-size:1.05rem;font-weight:800;position:relative}
+.part-seg .btn.has::after{content:"";position:absolute;top:7px;right:8px;width:6px;height:6px;border-radius:50%;background:var(--hot)}
+.part-seg .btn[aria-pressed="true"].has::after{background:var(--on-accent)}
+.mode-seg .btn{min-width:0;padding:6px 12px;font-size:.85rem}
+.parts-top .spacer{flex:1}
+.seq-body{display:flex;flex-direction:column;gap:10px}
+#partsCard.collapsed .seq-body{display:none}
+#partsCard.collapsed .collapse-btn svg{transform:rotate(180deg)}
+.seq-label{font-size:.72rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.seq-strip{display:flex;gap:8px;overflow-x:auto;padding:8px 2px 4px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.seq-strip::-webkit-scrollbar{display:none}
+.step{flex:none;appearance:none;-webkit-appearance:none;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:12px;min-width:62px;height:46px;padding:0 12px;
+  font:inherit;font-weight:800;font-size:1.05rem;display:inline-flex;align-items:center;justify-content:center;gap:1px;position:relative;cursor:pointer;-webkit-tap-highlight-color:transparent;font-variant-numeric:tabular-nums}
+.step b{color:var(--accent-ink)}
+.step .x{color:var(--muted);font-weight:600;margin:0 2px}
+.step.editing{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.step.playing{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.step.playing b,.step.playing .x{color:var(--on-accent)}
+.step .cnt{position:absolute;top:-9px;right:-6px;font-size:.66rem;font-weight:800;background:var(--ink);color:var(--bg);border-radius:999px;padding:1px 6px;display:none}
+.step.playing .cnt{display:block}
+.step.empty{opacity:.4}
+.step.add{min-width:46px;color:var(--muted);font-size:1.3rem}
+.step:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.picker{display:flex;flex-direction:column;gap:10px;padding:10px;border-radius:12px;background:var(--sunk);border:1px solid var(--line)}
+.wheels{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:8px;height:200px}
+.wheel-band{position:absolute;left:0;right:0;top:80px;height:40px;border-radius:12px;background:var(--panel);border:1px solid var(--line);pointer-events:none}
+.wheel{position:relative;height:200px;overflow-y:scroll;scroll-snap-type:y mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;text-align:center;
+  -webkit-mask-image:linear-gradient(transparent,#000 32%,#000 68%,transparent);mask-image:linear-gradient(transparent,#000 32%,#000 68%,transparent)}
+.wheel::-webkit-scrollbar{display:none}
+.wheel-pad{height:80px}
+.wheel-item{height:40px;line-height:40px;scroll-snap-align:center;font-size:1.45rem;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink);cursor:pointer;transform-origin:center}
+.wheel-cap{display:grid;grid-template-columns:1fr 1fr;gap:8px;text-align:center;font-size:.72rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:-4px}
+.grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1.3fr;gap:8px}
+.part-view{display:flex;flex-direction:column;gap:14px}
+
 /* tracks */
 .trk-list{display:flex;flex-direction:column}
 .track{display:flex;flex-direction:column;gap:8px;padding:10px 0}
@@ -287,6 +324,40 @@ body.recording #tracks .trk-name{pointer-events:none;opacity:.45}
     <input id="sessFileIn" type="file" hidden>
   </section>
 
+  <section id="partsCard" class="card lockable" aria-label="Części i sekwencja">
+    <div class="parts-top">
+      <div class="seg part-seg" role="group" aria-label="Część">
+        <button class="btn" type="button" data-part="A" aria-pressed="true">A</button>
+        <button class="btn" type="button" data-part="B" aria-pressed="false">B</button>
+        <button class="btn" type="button" data-part="C" aria-pressed="false">C</button>
+      </div>
+      <span class="spacer"></span>
+      <div class="seg mode-seg" role="group" aria-label="Co odtwarzać">
+        <button class="btn" type="button" data-mode="part" aria-pressed="true">Część</button>
+        <button class="btn" type="button" data-mode="seq" aria-pressed="false">Sekwencja</button>
+      </div>
+      <button id="seqCollapse" class="btn collapse-btn" type="button" aria-label="Zwiń sekwencję"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 15l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+    <div class="seq-body">
+      <div id="seqStrip" class="seq-strip" aria-label="Sekwencja"></div>
+      <div id="picker" class="picker" hidden>
+        <div class="wheel-cap"><span>Część</span><span>Ile razy</span></div>
+        <div class="wheels">
+          <div class="wheel-band"></div>
+          <div id="wheelPart" class="wheel" aria-label="Część"></div>
+          <div id="wheelCount" class="wheel" aria-label="Ile razy"></div>
+        </div>
+        <div class="grid4">
+          <button id="pkLeft" class="btn sm" type="button" aria-label="Przesuń klocek w lewo">◀</button>
+          <button id="pkRight" class="btn sm" type="button" aria-label="Przesuń klocek w prawo">▶</button>
+          <button id="pkDel" class="btn sm warn" type="button">Usuń</button>
+          <button id="pkDone" class="btn sm accent" type="button">Gotowe</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div id="partView" class="part-view">
   <section id="tracks" class="card" aria-label="Ślady">
     <div class="trk-top">
       <button id="trkToggle" class="trk-toggle" type="button" aria-expanded="true" aria-controls="trackList"><span id="trkCount">Ślady</span></button>
@@ -303,9 +374,10 @@ body.recording #tracks .trk-name{pointer-events:none;opacity:.45}
     </div>
     <div id="bounceSheet" class="sheet" hidden>
       <p class="sheet-title" id="bounceTitle">Co zgrać do MP3?</p>
-      <div class="grid2" id="bounceChoice">
-        <button id="bounceAll" class="btn sm" type="button">Cały utwór</button>
-        <button id="bounceLoop" class="btn sm" type="button">Tylko pętlę A–B</button>
+      <div class="grid3" id="bounceChoice">
+        <button id="bounceAll" class="btn sm" type="button">Ta część</button>
+        <button id="bounceLoop" class="btn sm" type="button">Tylko pętla</button>
+        <button id="bounceSeq" class="btn sm" type="button">Cała sekwencja</button>
       </div>
       <div id="bounceProg" class="busy" hidden><div class="bar"><span id="bounceBar"></span></div><span id="bounceTxt">0%</span></div>
       <div class="grid2" id="bounceDone" hidden>
@@ -337,6 +409,7 @@ body.recording #tracks .trk-name{pointer-events:none;opacity:.45}
       </div>
     </div>
   </section>
+  </div>
 
   <section class="transport lockable" aria-label="Odtwarzanie">
     <button id="toStart" class="btn tbtn start" type="button" aria-label="Od początku (od A, gdy jest pętla)"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M5.5 5h2.6v14H5.5zM19 5.2v13.6L9.2 12z" fill="currentColor"/></svg></button>
@@ -437,6 +510,8 @@ body.recording #tracks .trk-name{pointer-events:none;opacity:.45}
         <li>Ślady 2–4 przesuwasz strzałkami względem śladu 1: <strong>‹ ›</strong> o 10 ms, <strong>‹‹ ››</strong> o 100 ms. Gdy poprawiasz świeże nagranie, aplikacja zapamiętuje poprawkę i stosuje ją do kolejnych nagrań.</li>
         <li><strong>Pętla:</strong> przeciągnij palcem po przebiegu, a potem dostrój A i B przyciskami ±. Znaczniki A i B możesz też przeciągać. <strong>Kłódka</strong> blokuje pętlę i przebieg przed przypadkowym dotknięciem (przewijanie działa dalej).</li>
         <li><strong>Tempo i transpozycja</strong> działają na wszystkie ślady. Tempo zmienia się bez zmiany wysokości dźwięku, a transpozycja bez zmiany tempa.</li>
+        <li><strong>Części A, B, C:</strong> każda ma własne ślady, nagrania, pętlę i mikser. Tempo i transpozycja są wspólne. Kropka przy literze oznacza, że część ma nagrania.</li>
+        <li><strong>Sekwencja:</strong> klocki typu A×4, B×2. Stuknij klocek, żeby kółkiem wybrać część i liczbę powtórzeń (1–32), albo <strong>+</strong>, żeby dodać nowy. Przełącz na <strong>Sekwencja</strong> i stuknij ▶: każda część gra swoją pętlę (albo całość, gdy pętli nie ma) tyle razy, ile ustawisz, a po ostatnim klocku wszystko wraca na początek.</li>
         <li><strong>Sesje:</strong> stuknij nazwę sesji na górze, żeby otworzyć listę, założyć nową, zrobić kopię albo wysłać sesję jako plik na drugie urządzenie. Wszystko zapisuje się samo.</li>
         <li><strong>Eksportuj MP3</strong> zgrywa wszystko tak, jak słyszysz. W menu udostępniania wybierz Messengera albo Zachowaj w Plikach.</li>
         <li>Aplikacja działa bez internetu. Brak dźwięku? Sprawdź, czy telefon nie jest w trybie cichym.</li>
@@ -725,9 +800,12 @@ const content = () => slots.filter(hasContent);
 const slotById = (id) => slots.find((s) => s.id === id) || null;
 const newSlot = () => ({ id: nextId++, name: '', raw: null, dur: 0, vol: 1, trim: 1, offset: 0, max: 0, src: null, open: false, mute: false, solo: false });
 const refOffset = () => hasContent(slots[0]) ? slots[0].offset : 0;
-const anySolo = () => slots.some((s) => hasContent(s) && s.solo);
-const audible = (s) => !s.mute && (!anySolo() || s.solo);
-const effGain = (s) => (rec && rec.id === s.id) ? 0 : (audible(s) ? s.vol * (s.trim || 1) : 0);
+const anySoloIn = (list) => list.some((s) => hasContent(s) && s.solo);
+const audibleIn = (list, s) => !s.mute && (!anySoloIn(list) || s.solo);
+const effGainIn = (list, s) => (rec && rec.id === s.id) ? 0 : (audibleIn(list, s) ? s.vol * (s.trim || 1) : 0);
+const anySolo = () => anySoloIn(slots);
+const audible = (s) => audibleIn(slots, s);
+const effGain = (s) => effGainIn(slots, s);
 
 /* fader in dB: bottom = silence, 3/4 of the way up = 0 dB, top = +12 dB */
 const DB_MAX = 12, DB_MIN = -48, UNITY = 0.75;
@@ -889,17 +967,45 @@ function saveSlotData(s){
   });
   scheduleSave(true);
 }
-function stateObj(){
-  return {
-    v: 3, nextId, tempoPct, semi, A, B, loopOn, locked,
-    slots: slots.map((s) => ({ id: s.id, name: s.name, vol: s.vol, trim: s.trim || 1, offset: s.offset, has: hasContent(s), mute: !!s.mute, solo: !!s.solo }))
-  };
+/* ---------- parts A / B / C (each has its own tracks, loop and render) ---------- */
+const PARTS = ['A', 'B', 'C'];
+const blankPart = () => ({ slots: [newSlot()], R: null, renderDirty: false, A: null, B: null, loopOn: true, locked: false, paused: 0, tune: 'A', lastRec: null });
+let parts = {};
+let curPart = 'A';
+let playMode = 'part';                 // 'part' | 'seq'
+let sequence = [{ p: 'A', n: 1 }];
+function stashPart(){
+  const p = parts[curPart];
+  if (!p) return;
+  Object.assign(p, { slots, R, renderDirty, A, B, loopOn, locked, paused, tune, lastRec });
 }
+function applyPart(k){
+  const p = parts[k];
+  curPart = k;
+  slots = p.slots; R = p.R; renderDirty = !!p.renderDirty;
+  A = p.A; B = p.B; loopOn = p.loopOn !== false; locked = !!p.locked;
+  paused = p.paused || 0; tune = p.tune || 'A'; lastRec = p.lastRec || null;
+  shiftId = null; zoomed = false; drag = null; armed = null;
+}
+function initParts(){ parts = {}; for (const k of PARTS) parts[k] = blankPart(); curPart = 'A'; applyPart('A'); }
+const partHas = (k) => parts[k] && parts[k].slots.some(hasContent);
+const curT = () => 1 + tempoPct / 100;
+const curP = () => Math.pow(2, semi / 12);
+
+const slotMeta = (s) => ({ id: s.id, name: s.name, vol: s.vol, trim: s.trim || 1, offset: s.offset, has: hasContent(s), mute: !!s.mute, solo: !!s.solo });
+function stateObj(){
+  stashPart();
+  const ps = {};
+  for (const k of PARTS){ const p = parts[k]; ps[k] = { A: p.A, B: p.B, loopOn: p.loopOn !== false, locked: !!p.locked, slots: p.slots.map(slotMeta) }; }
+  return { v: 4, nextId, tempoPct, semi, curPart, playMode, sequence: sequence.map((x) => ({ p: x.p, n: x.n })), parts: ps };
+}
+const allSlots = () => { stashPart(); const out = []; for (const k of PARTS) for (const s of parts[k].slots) out.push(s); return out; };
 function writeState(){
   if (curSid == null) return Promise.resolve();
+  const st = stateObj();
   const m = sessMeta(curSid);
-  if (m){ m.updated = Date.now(); m.tracks = content().length; }
-  return Promise.all([DB.put(stKey(curSid), stateObj()), saveIndex()]).catch(() => {});
+  if (m){ m.updated = Date.now(); m.tracks = allSlots().filter(hasContent).length; }
+  return Promise.all([DB.put(stKey(curSid), st), saveIndex()]).catch(() => {});
 }
 function scheduleSave(now){
   if (restoring) return;
@@ -919,68 +1025,91 @@ const nextTick = () => new Promise((r) => setTimeout(r, 0));
 
 function scheduleRender(delay){
   renderDirty = true;
+  if (parts[curPart]) parts[curPart].renderDirty = true;
   clearTimeout(renderTimer);
   renderTimer = setTimeout(doRender, delay == null ? 60 : delay);
+}
+function markAllDirty(){ stashPart(); for (const k of PARTS) parts[k].renderDirty = true; }
+
+// Render one list of tracks at the current tempo / key. Returns null when aborted.
+async function renderList(list, alive, label){
+  const c = getCtx(), sr = c.sampleRate;
+  const T = curT(), P = curP();
+  let D = 0;
+  for (const s of list) D = Math.max(D, s.offset + s.dur);
+  D = Math.max(D, 0.1);
+  const Lout = Math.max(1, Math.round(D * sr / T));
+  const neutral = tempoPct === 0 && semi === 0;
+  if (!neutral){ setBusy(0, label); await nextTick(); if (!alive()) return null; }
+  const bufs = {};
+  for (const s of list) bufs[s.id] = c.createBuffer(1, Lout, sr);
+  if (neutral){
+    for (const s of list) alignCopy(s.raw, Math.round(s.offset * sr), bufs[s.id].getChannelData(0));
+  } else {
+    const Ys = [], Os = [], outs = [];
+    let tk = performance.now();
+    for (const s of list){
+      const o = Math.round(s.offset * sr);
+      if (semi === 0){ Ys.push(s.raw); Os.push(o); }
+      else {
+        const y = new Float32Array(resampleLen(s.raw.length, P));
+        for (const f of resampleGen(s.raw, P, y)){
+          if (performance.now() - tk > 40){ await nextTick(); tk = performance.now(); if (!alive()) return null; }
+        }
+        Ys.push(y); Os.push(Math.round(o / P));
+      }
+      outs.push(bufs[s.id].getChannelData(0));
+    }
+    const Ly = Math.ceil(D * sr / P);
+    for (const f of wsolaGen(Ys, Os, Ly, P / T, sr, outs)){
+      if (performance.now() - tk > 40){ setBusy(f, label); await nextTick(); tk = performance.now(); if (!alive()) return null; }
+    }
+  }
+  return { T, P, D, sr, bufs, dur: Lout / sr, len: Lout };
 }
 
 async function doRender(){
   if (rec || recStarting){ scheduleRender(500); return; }
   const gen = ++renderGen;
   const list = content();
-  if (!list.length){ R = null; renderDirty = false; setBusy(null); if (playing) pause(); ui(); return; }
-  const c = getCtx(), sr = c.sampleRate;
-  const T = 1 + tempoPct / 100, P = Math.pow(2, semi / 12);
-  const D = timelineDur();
-  const Lout = Math.max(1, Math.round(D * sr / T));
-  const neutral = tempoPct === 0 && semi === 0;
-  if (!neutral){ setBusy(0); await nextTick(); if (gen !== renderGen) return; }
-
-  const bufs = {};
-  try {
-    for (const s of list) bufs[s.id] = c.createBuffer(1, Lout, sr);
-    if (neutral){
-      for (const s of list) alignCopy(s.raw, Math.round(s.offset * sr), bufs[s.id].getChannelData(0));
-    } else {
-      const Ys = [], Os = [], outs = [];
-      let tk = performance.now();
-      for (const s of list){
-        const o = Math.round(s.offset * sr);
-        if (semi === 0){ Ys.push(s.raw); Os.push(o); }
-        else {
-          const y = new Float32Array(resampleLen(s.raw.length, P));
-          for (const f of resampleGen(s.raw, P, y)){
-            if (performance.now() - tk > 40){ await nextTick(); tk = performance.now(); if (gen !== renderGen) return; }
-          }
-          Ys.push(y); Os.push(Math.round(o / P));
-        }
-        outs.push(bufs[s.id].getChannelData(0));
-      }
-      const Ly = Math.ceil(D * sr / P);
-      for (const f of wsolaGen(Ys, Os, Ly, P / T, sr, outs)){
-        if (performance.now() - tk > 40){ setBusy(f); await nextTick(); tk = performance.now(); if (gen !== renderGen) return; }
-      }
-    }
-  } catch (err) {
+  if (!list.length){ R = null; renderDirty = false; stashPart(); setBusy(null); if (playing) pause(); ui(); return; }
+  let r;
+  try { r = await renderList(list, () => gen === renderGen); }
+  catch (err) {
     if (gen === renderGen){ setBusy(null); say('Brakuje pamięci na takie przeliczenie. Spróbuj krótszych nagrań albo mniejszej liczby śladów.', true); }
     return;
   }
-  if (gen !== renderGen) return;
+  if (!r || gen !== renderGen) return;
   setBusy(null);
   const wasPlaying = playing;
   const tau = pos();
-  R = { T, D, sr, bufs, dur: Lout / sr, len: Lout };
-  renderDirty = false;
+  R = r; renderDirty = false;
+  stashPart();
+  if (seqPlaying) restartSeqKeepingPlace();
   if (wasPlaying) startAt(tau);
-  else { paused = clamp(paused, 0, D); ui(); }
+  else { paused = clamp(paused, 0, r.D); ui(); }
+}
+
+async function ensureRendered(k){
+  stashPart();
+  const p = parts[k];
+  const list = p.slots.filter(hasContent);
+  if (!list.length){ p.R = null; p.renderDirty = false; return null; }
+  if (p.R && !p.renderDirty && p.R.T === curT() && p.R.P === curP() && list.every((s) => p.R.bufs[s.id])) return p.R;
+  const r = await renderList(list, () => true, 'Przeliczam część ' + k + '…');
+  setBusy(null);
+  p.R = r; p.renderDirty = false;
+  if (k === curPart){ R = r; renderDirty = false; }
+  return r;
 }
 
 /* ---------- playback ---------- */
 function loopActive(){ return loopOn && A != null && B != null && B - A >= MIN_LOOP; }
 function playingSlots(){ return slots.filter((s) => hasContent(s) && R && R.bufs[s.id]); }
 
-function snapOut(tb){
-  const sr = R.sr, i0 = Math.round(tb * sr), w = Math.round(0.004 * sr);
-  const ch = playingSlots().map((s) => ({ d: R.bufs[s.id].getChannelData(0), v: effGain(s) || 0.001 }));
+function snapIn(Rx, list, tb){
+  const sr = Rx.sr, i0 = Math.round(tb * sr), w = Math.round(0.004 * sr);
+  const ch = list.filter((s) => hasContent(s) && Rx.bufs[s.id]).map((s) => ({ d: Rx.bufs[s.id].getChannelData(0), v: effGainIn(list, s) || 0.001 }));
   if (!ch.length) return tb;
   const len = ch[0].d.length;
   const at = (i) => { let s = 0; for (const c of ch) s += c.d[i] * c.v; return s; };
@@ -990,9 +1119,15 @@ function snapOut(tb){
   }
   return best / sr;
 }
+const snapOut = (tb) => snapIn(R, slots, tb);
 
 function pos(){
   if (rec && ctx) return Math.max(0, rec.tauPlay + Math.max(0, ctx.currentTime - rec.when - (ctx.outputLatency || 0)) * rec.T);
+  if (seqPlaying && seq && ctx){
+    const cur = seqCurrent();
+    if (cur && cur.seg.part === curPart) return cur.tau;
+    return paused;
+  }
   if (!playing || !ctx || !playR) return paused;
   const lat = ctx.outputLatency || 0;
   let b = off0 + Math.max(0, ctx.currentTime - t0 - lat);
@@ -1066,6 +1201,7 @@ function pause(){
 }
 
 function togglePlay(){
+  if (playMode === 'seq'){ if (seqPlaying) pauseSeq(); else startSeq(seqPausedG); return; }
   if (playing){ pause(); return; }
   const D = timelineDur();
   let p = paused;
@@ -1073,6 +1209,161 @@ function togglePlay(){
   if (loopActive() && p >= B) p = A;
   startAt(p);
 }
+
+/* ---------- sequence playback: [A×4] [B×2] … scheduled ahead, sample-accurate ---------- */
+let seq = null, seqPlaying = false, seqPausedG = 0, seqFollow = null;
+
+function partLoopRange(k, Rx){
+  const p = parts[k];
+  if (p.loopOn !== false && p.A != null && p.B != null && p.B - p.A >= MIN_LOOP){
+    const a = snapIn(Rx, p.slots, p.A / Rx.T), b = Math.min(snapIn(Rx, p.slots, p.B / Rx.T), Rx.dur);
+    if (b - a > 0.02) return { a, b };
+  }
+  return { a: 0, b: Rx.dur };
+}
+function seqPlan(){
+  const plan = [];
+  let total = 0;
+  sequence.forEach((st, idx) => {
+    const p = parts[st.p];
+    const Rx = p && p.R;
+    if (!Rx || !partHas(st.p)) return;
+    const { a, b } = partLoopRange(st.p, Rx);
+    const len = b - a;
+    if (len <= 0.02) return;
+    plan.push({ idx, p: st.p, n: st.n, a, len, gstart: total, T: Rx.T });
+    total += len * st.n;
+  });
+  return { plan, total };
+}
+async function prepareSeq(){
+  stashPart();
+  const used = [...new Set(sequence.map((x) => x.p))];
+  for (const k of used){
+    try { await ensureRendered(k); }
+    catch (e) { setBusy(null); say('Brakuje pamięci, żeby przygotować część ' + k + '.', true); return false; }
+  }
+  setBusy(null);
+  return true;
+}
+function seqGainFor(k, s){
+  const key = k + ':' + s.id;
+  let gn = seq.gains[key];
+  if (!gn){
+    gn = ctx.createGain();
+    gn.gain.value = effGainIn(parts[k].slots, s);
+    gn.connect(getMaster());
+    seq.gains[key] = gn;
+  }
+  return gn;
+}
+function seqSchedule(){
+  if (!seq) return;
+  const c = ctx, horizon = c.currentTime + 0.8;
+  const plan = seq.pl.plan;
+  let guard = 0;
+  while (seq.whenNext < horizon && guard++ < 256){
+    const st = plan[seq.i];
+    const within = seq.w, len = st.len - within, t = seq.whenNext;
+    const part = parts[st.p];
+    const nodes = [];
+    for (const s of part.slots){
+      if (!hasContent(s) || !part.R || !part.R.bufs[s.id]) continue;
+      const src = c.createBufferSource();
+      src.buffer = part.R.bufs[s.id];
+      const env = c.createGain();
+      env.gain.setValueAtTime(0, t);
+      env.gain.linearRampToValueAtTime(1, t + 0.002);
+      env.gain.setValueAtTime(1, t + Math.max(0.002, len - 0.002));
+      env.gain.linearRampToValueAtTime(0, t + len);
+      src.connect(env); env.connect(seqGainFor(st.p, s));
+      src.start(t, st.a + within, len);
+      nodes.push(src, env);
+    }
+    seq.segs.push({ idx: st.idx, r: seq.r, n: st.n, part: st.p, when: t, end: t + len, a: st.a + within, T: st.T, g: st.gstart + seq.r * st.len + within, nodes });
+    seq.whenNext += len;
+    seq.w = 0;
+    seq.r++;
+    if (seq.r >= st.n){ seq.r = 0; seq.i = (seq.i + 1) % plan.length; }
+  }
+  const old = c.currentTime - 2;
+  seq.segs = seq.segs.filter((sg) => {
+    if (sg.end < old){ sg.nodes.forEach((n) => { try { n.disconnect(); } catch (e) {} }); return false; }
+    return true;
+  });
+}
+function seqCurrent(){
+  if (!seq || !ctx) return null;
+  const now = ctx.currentTime - (ctx.outputLatency || 0);
+  for (const sg of seq.segs){ if (now >= sg.when && now < sg.end) return { seg: sg, tau: (sg.a + (now - sg.when)) * sg.T, g: sg.g + (now - sg.when) }; }
+  const first = seq.segs[0];
+  if (first && now < first.when) return { seg: first, tau: first.a * first.T, g: first.g };
+  return null;
+}
+function seqPosG(){ const c = seqCurrent(); return c ? c.g : seqPausedG; }
+function stopSeqNodes(){
+  if (!seq) return;
+  clearInterval(seq.timer);
+  const n = ctx.currentTime;
+  for (const sg of seq.segs) for (const nd of sg.nodes){
+    try {
+      if (nd.stop) nd.stop(n + 0.012);
+      else { nd.gain.cancelScheduledValues(n); nd.gain.setValueAtTime(nd.gain.value, n); nd.gain.linearRampToValueAtTime(0, n + 0.01); }
+    } catch (e) {}
+  }
+  const gs = seq.gains;
+  setTimeout(() => Object.values(gs).forEach((gn) => { try { gn.disconnect(); } catch (e) {} }), 300);
+  seq = null;
+}
+let seqStarting = false;
+async function startSeq(g){
+  if (rec || recStarting || seqStarting) return;
+  seqStarting = true;
+  try {
+    if (playing) pause();
+    const wasSeq = !!seq;
+    stopSeqNodes();
+    if (!wasSeq) seqPlaying = false;
+    const ok = await prepareSeq();
+    if (!ok){ seqPlaying = false; ui(); return; }
+    const pl = seqPlan();
+    if (!pl.plan.length){ seqPlaying = false; ui(); say('Sekwencja jest pusta albo jej części nie mają nagrań.', true); return; }
+    const c = getCtx();
+    if (c.state !== 'running'){ try { await c.resume(); } catch (e) {} }
+    g = ((g % pl.total) + pl.total) % pl.total;
+    let i = 0, r = 0, w = 0;
+    for (let k = 0; k < pl.plan.length; k++){
+      const st = pl.plan[k];
+      if (g < st.gstart + st.len * st.n || k === pl.plan.length - 1){
+        const off = Math.max(0, g - st.gstart);
+        r = Math.min(st.n - 1, Math.floor(off / st.len));
+        w = clamp(off - r * st.len, 0, Math.max(0, st.len - 0.03));
+        i = k; break;
+      }
+    }
+    seq = { pl, i, r, w, whenNext: c.currentTime + 0.08, segs: [], gains: {}, timer: 0 };
+    seqSchedule();
+    seq.timer = setInterval(seqSchedule, 60);
+    seqPlaying = true;
+    seqFollow = null;
+    keepAwake(true);
+    ui(); kick();
+  } finally { seqStarting = false; }
+}
+function pauseSeq(){
+  seqPausedG = seqPosG();
+  stopSeqNodes();
+  seqPlaying = false;
+  keepAwake(false);
+  ui();
+}
+function restartSeqKeepingPlace(){
+  if (!seqPlaying || !seq) return;
+  const cur = seqCurrent();
+  const oldT = cur ? cur.seg.T : curT();
+  startSeq(seqPosG() * oldT / curT());
+}
+function seqEdited(){ if (seqPlaying) startSeq(seqPosG()); }
 
 /* ---------- loop points ---------- */
 function clampMarks(){
@@ -1154,10 +1445,16 @@ function clearLoop(){
 }
 
 function toStart(){
+  if (playMode === 'seq'){ startSeq(0); return; }
   if (!content().length){ say('Najpierw wczytaj albo nagraj ślad.'); return; }
   startAt(A != null && B != null ? A : 0);
 }
 function skip(d){
+  if (playMode === 'seq'){
+    if (seqPlaying) startSeq(seqPosG() + d);
+    else { seqPausedG = Math.max(0, seqPausedG + d); }
+    return;
+  }
   if (!content().length) return;
   const D = timelineDur();
   let p = pos() + d;
@@ -1188,9 +1485,11 @@ function applyGains(){
   if (!ctx) return;
   const n = ctx.currentTime;
   for (const s of slots){
-    const gn = gains[s.id];
-    if (!gn) continue;
-    try { gn.gain.cancelScheduledValues(n); gn.gain.setTargetAtTime(effGain(s), n, 0.015); } catch (e) {}
+    const list = [gains[s.id], seq && seq.gains[curPart + ':' + s.id]];
+    for (const gn of list){
+      if (!gn) continue;
+      try { gn.gain.cancelScheduledValues(n); gn.gain.setTargetAtTime(effGain(s), n, 0.015); } catch (e) {}
+    }
   }
 }
 function setVol(id, v){
@@ -1685,7 +1984,17 @@ function kick(){
       if (lab) lab.textContent = 'Stop · ' + fmt(Math.max(0, ctx.currentTime - rec.when)).slice(0, -3);
       if (rec.stopAt != null && pos() >= rec.stopAt) stopRecording();
     }
-    if (playing || rec) raf = requestAnimationFrame(tick);
+    if (seqPlaying && seq){
+      const cur = seqCurrent();
+      if (cur){
+        if (seqFollow !== cur.seg.part){
+          seqFollow = cur.seg.part;
+          if (cur.seg.part !== curPart) switchPart(cur.seg.part, { instant: true });
+        }
+        updateSeqChips(cur);
+      }
+    }
+    if (playing || rec || seqPlaying) raf = requestAnimationFrame(tick);
   };
   raf = requestAnimationFrame(tick);
 }
@@ -1723,15 +2032,18 @@ function ui(){
   lk.setAttribute('aria-pressed', String(locked));
   lk.setAttribute('aria-label', locked ? 'Odblokuj pętlę' : 'Zablokuj pętlę');
   const pb = $('play');
-  pb.innerHTML = playing ? ICON_PAUSE : ICON_PLAY;
-  pb.setAttribute('aria-label', playing ? 'Pauza' : 'Odtwarzaj');
+  const isOn = playing || seqPlaying;
+  pb.innerHTML = isOn ? ICON_PAUSE : ICON_PLAY;
+  pb.setAttribute('aria-label', isOn ? 'Pauza' : (playMode === 'seq' ? 'Odtwarzaj sekwencję' : 'Odtwarzaj'));
   const hasLoop = A != null && B != null;
   const lb = $('loop');
   lb.disabled = !hasLoop || locked;
   lb.setAttribute('aria-pressed', String(hasLoop && loopOn));
   lb.textContent = 'Pętla: ' + (loopOn ? 'wł.' : 'wył.');
-  document.querySelectorAll('[data-skip]').forEach((b) => { b.disabled = !has; });
-  $('toStart').disabled = !has;
+  const canPlay = playMode === 'seq' ? PARTS.some(partHas) : has;
+  document.querySelectorAll('[data-skip]').forEach((b) => { b.disabled = !canPlay; });
+  $('toStart').disabled = !canPlay;
+  renderParts();
   $('clearLoop').disabled = (A == null && B == null) || locked;
   $('tuneA').setAttribute('aria-pressed', String(tune === 'A'));
   $('tuneB').setAttribute('aria-pressed', String(tune === 'B'));
@@ -1743,9 +2055,171 @@ function ui(){
   scheduleSave();
 }
 
+/* ---------- parts bar, sequence strip and wheel picker ---------- */
+let pickIdx = -1, seqCollapsed = false;
+try { seqCollapsed = localStorage.getItem('looper.seqCollapsed') === '1'; } catch (e) {}
+
+function switchPart(k, opts){
+  opts = opts || {};
+  if (k === curPart || rec || recStarting || !parts[k]) return;
+  if (playing) pause();
+  stashPart();
+  const dir = PARTS.indexOf(k) > PARTS.indexOf(curPart) ? 1 : -1;
+  const pv = $('partView');
+  const doSwitch = () => {
+    applyPart(k);
+    lastSig = ''; lastMixSig = ''; lastDotSig = '';
+    if (bounceWorker == null) bounceUI('closed');
+    updateCanvasHeight(); resetView();
+    ui();
+    if (partHas(k) && (!R || renderDirty || R.T !== curT() || R.P !== curP())) scheduleRender(0);
+    scheduleSave();
+  };
+  let reduce = false;
+  try { reduce = matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+  if (opts.instant || reduce || !pv.animate){ doSwitch(); return; }
+  const out = pv.animate([{ transform: 'translateX(0)', opacity: 1 }, { transform: 'translateX(' + (-dir * 56) + 'px)', opacity: 0 }], { duration: 120, easing: 'ease-in' });
+  out.onfinish = () => {
+    doSwitch();
+    pv.animate([{ transform: 'translateX(' + (dir * 56) + 'px)', opacity: 0 }, { transform: 'translateX(0)', opacity: 1 }], { duration: 170, easing: 'ease-out' });
+  };
+}
+
+let lastStripSig = '';
+function renderParts(){
+  document.querySelectorAll('[data-part]').forEach((b) => {
+    const k = b.dataset.part;
+    b.setAttribute('aria-pressed', String(k === curPart));
+    b.classList.toggle('has', partHas(k));
+    b.setAttribute('aria-label', 'Część ' + k + (partHas(k) ? ', ma nagrania' : ', pusta'));
+  });
+  document.querySelectorAll('[data-mode]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === playMode)));
+  $('partsCard').classList.toggle('collapsed', seqCollapsed);
+  $('seqCollapse').setAttribute('aria-label', seqCollapsed ? 'Rozwiń sekwencję' : 'Zwiń sekwencję');
+  renderSeqStrip();
+}
+function renderSeqStrip(){
+  const sig = JSON.stringify([sequence, pickIdx, PARTS.map(partHas)]);
+  if (sig === lastStripSig) return;
+  lastStripSig = sig;
+  $('seqStrip').innerHTML = sequence.map((st, i) =>
+    '<button class="step' + (i === pickIdx ? ' editing' : '') + (partHas(st.p) ? '' : ' empty') + '" type="button" data-step="' + i + '" aria-label="Część ' + st.p + ', ' + st.n + ' razy">' +
+      '<b>' + st.p + '</b><span class="x">×</span>' + st.n + '<small class="cnt"></small></button>').join('') +
+    '<button class="step add" type="button" data-step="add" aria-label="Dodaj klocek do sekwencji">+</button>';
+}
+function updateSeqChips(cur){
+  document.querySelectorAll('#seqStrip .step[data-step]').forEach((el) => {
+    if (el.dataset.step === 'add') return;
+    const i = +el.dataset.step;
+    const on = !!(cur && cur.seg.idx === i);
+    el.classList.toggle('playing', on);
+    if (on){ const c = el.querySelector('.cnt'); const t = (cur.seg.r + 1) + '/' + cur.seg.n; if (c.textContent !== t) c.textContent = t; }
+  });
+}
+function clearSeqChips(){ document.querySelectorAll('#seqStrip .step.playing').forEach((el) => el.classList.remove('playing')); }
+
+function setPlayMode(m){
+  if (m === playMode) return;
+  if (seqPlaying) pauseSeq();
+  if (playing) pause();
+  playMode = m;
+  clearSeqChips();
+  if (m === 'seq' && !sequence.length) say('Dodaj klocek do sekwencji przyciskiem +.');
+  else if (m === 'seq') say('Tryb sekwencji: ▶ gra klocki po kolei.');
+  ui(); scheduleSave();
+}
+
+/* wheel picker (scroll-snap, like the iPhone timer) */
+const ITEM_H = 40;
+function buildWheel(id, values){
+  const el = $(id);
+  el.innerHTML = '<div class="wheel-pad"></div>' + values.map((v, i) => '<div class="wheel-item" data-i="' + i + '">' + v + '</div>').join('') + '<div class="wheel-pad"></div>';
+  let t = 0;
+  el.addEventListener('scroll', () => { styleWheel(el); clearTimeout(t); t = setTimeout(() => onWheelSettle(id), 110); }, { passive: true });
+  el.addEventListener('click', (e) => { const it = e.target.closest('.wheel-item'); if (it) setWheel(id, +it.dataset.i, true); });
+}
+function styleWheel(el){
+  const c = el.scrollTop / ITEM_H;
+  el.querySelectorAll('.wheel-item').forEach((it) => {
+    const d = Math.abs(+it.dataset.i - c);
+    it.style.opacity = String(Math.max(0.25, 1 - d * 0.3));
+    it.style.transform = 'scale(' + Math.max(0.74, 1 - d * 0.09).toFixed(3) + ')';
+  });
+}
+function setWheel(id, idx, smooth){
+  const el = $(id);
+  try { el.scrollTo({ top: idx * ITEM_H, behavior: smooth ? 'smooth' : 'auto' }); } catch (e) { el.scrollTop = idx * ITEM_H; }
+  styleWheel(el);
+}
+function onWheelSettle(id){
+  if (pickIdx < 0 || !sequence[pickIdx]) return;
+  const idx = Math.round($(id).scrollTop / ITEM_H);
+  const st = sequence[pickIdx];
+  const before = st.p + st.n;
+  if (id === 'wheelPart') st.p = PARTS[clamp(idx, 0, PARTS.length - 1)];
+  else st.n = clamp(idx + 1, 1, 32);
+  if (st.p + st.n !== before){ renderSeqStrip(); scheduleSave(); seqEdited(); }
+}
+function openPicker(i){
+  pickIdx = i;
+  $('picker').hidden = false;
+  lastStripSig = ''; renderSeqStrip();
+  requestAnimationFrame(() => {
+    setWheel('wheelPart', PARTS.indexOf(sequence[i].p));
+    setWheel('wheelCount', sequence[i].n - 1);
+  });
+}
+function closePicker(){ pickIdx = -1; $('picker').hidden = true; lastStripSig = ''; renderSeqStrip(); }
+
+$('partsCard').addEventListener('click', (e) => {
+  const pb = e.target.closest('[data-part]');
+  if (pb){ switchPart(pb.dataset.part); return; }
+  const mb = e.target.closest('[data-mode]');
+  if (mb){ setPlayMode(mb.dataset.mode); return; }
+  const sb = e.target.closest('[data-step]');
+  if (sb){
+    if (sb.dataset.step === 'add'){
+      const last = sequence[sequence.length - 1];
+      sequence.push({ p: curPart, n: last ? last.n : 4 });
+      scheduleSave(); seqEdited();
+      openPicker(sequence.length - 1);
+      const strip = $('seqStrip'); strip.scrollLeft = strip.scrollWidth;
+      return;
+    }
+    const i = +sb.dataset.step;
+    if (pickIdx === i) closePicker(); else openPicker(i);
+  }
+});
+$('pkLeft').addEventListener('click', () => {
+  if (pickIdx <= 0) return;
+  const i = pickIdx; [sequence[i - 1], sequence[i]] = [sequence[i], sequence[i - 1]];
+  pickIdx = i - 1; lastStripSig = ''; renderSeqStrip(); scheduleSave(); seqEdited();
+});
+$('pkRight').addEventListener('click', () => {
+  if (pickIdx < 0 || pickIdx >= sequence.length - 1) return;
+  const i = pickIdx; [sequence[i + 1], sequence[i]] = [sequence[i], sequence[i + 1]];
+  pickIdx = i + 1; lastStripSig = ''; renderSeqStrip(); scheduleSave(); seqEdited();
+});
+$('pkDel').addEventListener('click', () => {
+  if (pickIdx < 0) return;
+  sequence.splice(pickIdx, 1);
+  closePicker(); scheduleSave(); seqEdited();
+  if (!sequence.length && seqPlaying) pauseSeq();
+});
+$('pkDone').addEventListener('click', closePicker);
+$('seqCollapse').addEventListener('click', () => {
+  seqCollapsed = !seqCollapsed;
+  try { localStorage.setItem('looper.seqCollapsed', seqCollapsed ? '1' : '0'); } catch (e) {}
+  renderParts();
+});
+buildWheel('wheelPart', PARTS);
+buildWheel('wheelCount', Array.from({ length: 32 }, (_, i) => String(i + 1)));
+
 /* ---------- sessions ---------- */
 function resetRuntime(){
   if (playing) pause();
+  if (seqPlaying || seq){ stopSeqNodes(); seqPlaying = false; }
+  seqPausedG = 0; seqFollow = null; pickIdx = -1;
   killSources();
   R = null; playR = null; renderDirty = false;
   A = null; B = null; loopOn = true; locked = false; zoomed = false; shiftId = null; lastRec = null; paused = 0; tune = 'A';
@@ -1768,34 +2242,54 @@ async function restoreData(src){
   return { raw, dur: raw.length / sr, max: absMax(raw), src: src.kind === 'file' ? src : { kind: 'pcm' }, name: src.name };
 }
 
+async function loadSlotsFrom(sid, metas){
+  const out = [];
+  for (const m of metas){
+    const sl = { id: m.id, name: m.name || '', raw: null, dur: 0, vol: m.vol != null ? m.vol : 1, trim: m.trim || 1, offset: m.offset || 0, max: 0, src: null, open: false, mute: !!m.mute, solo: !!m.solo };
+    if (m.has){
+      try {
+        const d = await restoreData(await DB.get(dKey(sid, m.id)));
+        if (d){
+          sl.raw = d.raw; sl.dur = d.dur; sl.max = d.max; sl.src = d.src; if (!sl.name) sl.name = d.name || '';
+          if (m.trim == null){ sl.trim = autoTrim(sl.raw); sl.vol = 1; }
+        }
+      } catch (e) {}
+    }
+    out.push(sl);
+  }
+  return out;
+}
 async function loadSession(sid){
   resetRuntime();
   curSid = sid; sessions.current = sid;
   const st = await DB.get(stKey(sid)).catch(() => null);
   nextId = 1;
-  if (!st || !st.slots || !st.slots.length){ slots = [newSlot()]; setTempo(0); setSemi(0); return; }
-  nextId = st.nextId || 1;
-  const out = [];
-  for (const m of st.slots.slice(0, MAX_TRACKS)){
-    const s = { id: m.id, name: m.name || '', raw: null, dur: 0, vol: m.vol != null ? m.vol : 1, trim: m.trim || 1, offset: m.offset || 0, max: 0, src: null, open: false, mute: !!m.mute, solo: !!m.solo };
-    nextId = Math.max(nextId, m.id + 1);
-    if (m.has){
-      try {
-        const d = await restoreData(await DB.get(dKey(sid, m.id)));
-        if (d){
-          s.raw = d.raw; s.dur = d.dur; s.max = d.max; s.src = d.src; if (!s.name) s.name = d.name || '';
-          if (m.trim == null){ s.trim = autoTrim(s.raw); s.vol = 1; }
-        }
-      } catch (e) {}
+  initParts();
+  sequence = [{ p: 'A', n: 1 }]; playMode = 'part';
+  if (!st){ setTempo(0); setSemi(0); return; }
+  const psrc = (st.v >= 4 && st.parts) ? st.parts
+    : { A: { A: st.A, B: st.B, loopOn: st.loopOn, locked: st.locked, slots: st.slots || [] } };
+  let maxId = (st.nextId || 1) - 1;
+  for (const k of PARTS) for (const m of ((psrc[k] && psrc[k].slots) || [])) maxId = Math.max(maxId, m.id);
+  nextId = maxId + 1;
+  for (const k of PARTS){
+    const ps = psrc[k];
+    const p = blankPart();
+    if (ps){
+      const list = await loadSlotsFrom(sid, ps.slots || []);
+      if (list.length) p.slots = list;
+      p.A = ps.A != null ? ps.A : null; p.B = ps.B != null ? ps.B : null;
+      p.loopOn = ps.loopOn !== false; p.locked = !!ps.locked;
+      p.paused = p.A != null ? p.A : 0;
     }
-    out.push(s);
+    parts[k] = p;
   }
-  slots = out.length ? out : [newSlot()];
+  if (Array.isArray(st.sequence) && st.sequence.length) sequence = st.sequence.map((x) => ({ p: PARTS.includes(x.p) ? x.p : 'A', n: clamp((x.n | 0) || 1, 1, 32) }));
+  else if (st.v >= 4) sequence = [];
+  playMode = st.playMode === 'seq' ? 'seq' : 'part';
   setTempo(st.tempoPct || 0); setSemi(st.semi || 0);
-  A = st.A != null ? st.A : null; B = st.B != null ? st.B : null;
-  loopOn = st.loopOn !== false; locked = !!st.locked;
+  applyPart(PARTS.includes(st.curPart) ? st.curPart : 'A');
   clampMarks();
-  paused = A != null ? A : 0;
 }
 
 function afterLoad(){
@@ -1806,6 +2300,13 @@ function afterLoad(){
   renderSessions();
   doRender();
 }
+const stSlotIds = (st) => {
+  const ids = [];
+  if (!st) return ids;
+  if (st.parts) for (const k of PARTS) for (const m of ((st.parts[k] && st.parts[k].slots) || [])) ids.push(m.id);
+  if (st.slots) for (const m of st.slots) ids.push(m.id);
+  return ids;
+};
 
 async function switchSession(sid){
   if (rec || sid === curSid) return;
@@ -1828,7 +2329,7 @@ async function newSession(name){
   restoring = true;
   resetRuntime();
   curSid = sid; sessions.current = sid;
-  nextId = 1; slots = [newSlot()]; setTempo(0); setSemi(0);
+  nextId = 1; initParts(); sequence = [{ p: 'A', n: 1 }]; playMode = 'part'; setTempo(0); setSemi(0);
   restoring = false;
   await writeState();
   afterLoad();
@@ -1843,15 +2344,16 @@ async function copySession(){
   const now = Date.now();
   const st = stateObj();
   await DB.put(stKey(sid), st);
-  for (const s of content()) await DB.put(dKey(sid, s.id), slotSrc(s));
-  sessions.list.push({ sid, name: (m ? m.name : 'Sesja') + ' (kopia)', created: now, updated: now, tracks: content().length });
+  const all = allSlots().filter(hasContent);
+  for (const s of all) await DB.put(dKey(sid, s.id), slotSrc(s));
+  sessions.list.push({ sid, name: (m ? m.name : 'Sesja') + ' (kopia)', created: now, updated: now, tracks: all.length });
   await saveIndex();
   await switchSession(sid);
 }
 
 async function deleteSession(sid){
   const st = await DB.get(stKey(sid)).catch(() => null);
-  if (st && st.slots) for (const m of st.slots) await DB.del(dKey(sid, m.id)).catch(() => {});
+  for (const id of stSlotIds(st)) await DB.del(dKey(sid, id)).catch(() => {});
   await DB.del(stKey(sid)).catch(() => {});
   sessions.list = sessions.list.filter((x) => x.sid !== sid);
   if (sid === curSid){
@@ -1922,20 +2424,26 @@ $('sessList').addEventListener('click', (e) => {
 function exportSession(){
   const m = sessMeta(curSid);
   const name = m ? m.name : 'Sesja';
-  const meta = { format: 'looper-session', version: 1, name, tempoPct, semi, A, B, loopOn, locked, tracks: [] };
-  const parts = [];
-  for (const s of slots){
-    if (!hasContent(s)){ meta.tracks.push({ empty: true, vol: s.vol }); continue; }
-    const src = slotSrc(s);
-    const bytes = new Uint8Array(src.data);
-    meta.tracks.push({ name: s.name, vol: s.vol, trim: s.trim || 1, offset: s.offset, mute: !!s.mute, solo: !!s.solo, kind: src.kind, sr: src.sr || null, bytes: bytes.length });
-    parts.push(bytes);
+  stashPart();
+  const meta = { format: 'looper-session', version: 2, name, tempoPct, semi, curPart, playMode, sequence, parts: {} };
+  const payloads = [];
+  for (const k of PARTS){
+    const p = parts[k];
+    const pm = { A: p.A, B: p.B, loopOn: p.loopOn !== false, locked: !!p.locked, tracks: [] };
+    for (const sl of p.slots){
+      if (!hasContent(sl)){ pm.tracks.push({ empty: true, vol: sl.vol }); continue; }
+      const src = slotSrc(sl);
+      const bytes = new Uint8Array(src.data);
+      pm.tracks.push({ name: sl.name, vol: sl.vol, trim: sl.trim || 1, offset: sl.offset, mute: !!sl.mute, solo: !!sl.solo, kind: src.kind, sr: src.sr || null, bytes: bytes.length });
+      payloads.push(bytes);
+    }
+    meta.parts[k] = pm;
   }
   const json = new TextEncoder().encode(JSON.stringify(meta));
   const head = new Uint8Array(12);
   head.set([76, 79, 79, 80, 69, 82, 83, 49]);
   new DataView(head.buffer).setUint32(8, json.length, true);
-  shareBlob(new Blob([head, json].concat(parts), { type: 'application/octet-stream' }), safeName(name) + '.looper', 'application/octet-stream');
+  shareBlob(new Blob([head, json].concat(payloads), { type: 'application/octet-stream' }), safeName(name) + '.looper', 'application/octet-stream');
 }
 async function importSessionFile(file){
   if (!file) return;
@@ -1950,18 +2458,28 @@ async function importSessionFile(file){
     clearTimeout(saveTimer); await writeState();
     const sid = sessions.nextSid++;
     const now = Date.now();
-    const st = { v: 3, nextId: 1, tempoPct: meta.tempoPct || 0, semi: meta.semi || 0, A: meta.A != null ? meta.A : null, B: meta.B != null ? meta.B : null, loopOn: meta.loopOn !== false, locked: !!meta.locked, slots: [] };
+    const srcParts = meta.parts || { A: { A: meta.A, B: meta.B, loopOn: meta.loopOn, locked: meta.locked, tracks: meta.tracks || [] } };
+    const st = { v: 4, nextId: 1, tempoPct: meta.tempoPct || 0, semi: meta.semi || 0, curPart: PARTS.includes(meta.curPart) ? meta.curPart : 'A',
+                 playMode: meta.playMode === 'seq' ? 'seq' : 'part', sequence: Array.isArray(meta.sequence) ? meta.sequence : [{ p: 'A', n: 1 }], parts: {} };
     let n = 0;
-    for (const t of (meta.tracks || []).slice(0, MAX_TRACKS)){
-      const id = st.nextId++;
-      if (t.empty){ st.slots.push({ id, name: '', vol: t.vol != null ? t.vol : 1, offset: 0, has: false }); continue; }
-      const data = buf.slice(p, p + t.bytes); p += t.bytes;
-      const src = t.kind === 'file' ? { kind: 'file', name: t.name, data } : { kind: 'pcm', sr: t.sr, name: t.name, data };
-      await DB.put(dKey(sid, id), src);
-      st.slots.push({ id, name: t.name || '', vol: t.vol != null ? t.vol : 1, trim: t.trim != null ? t.trim : null, offset: t.offset || 0, has: true, mute: !!t.mute, solo: !!t.solo });
-      n++;
+    for (const k of PARTS){
+      const pm = srcParts[k];
+      const ps = { A: null, B: null, loopOn: true, locked: false, slots: [] };
+      if (pm){
+        ps.A = pm.A != null ? pm.A : null; ps.B = pm.B != null ? pm.B : null; ps.loopOn = pm.loopOn !== false; ps.locked = !!pm.locked;
+        for (const t of (pm.tracks || [])){
+          const id = st.nextId++;
+          if (t.empty){ ps.slots.push({ id, name: '', vol: t.vol != null ? t.vol : 1, offset: 0, has: false }); continue; }
+          const data = buf.slice(p, p + t.bytes); p += t.bytes;
+          const src = t.kind === 'file' ? { kind: 'file', name: t.name, data } : { kind: 'pcm', sr: t.sr, name: t.name, data };
+          await DB.put(dKey(sid, id), src);
+          ps.slots.push({ id, name: t.name || '', vol: t.vol != null ? t.vol : 1, trim: t.trim != null ? t.trim : null, offset: t.offset || 0, has: true, mute: !!t.mute, solo: !!t.solo });
+          n++;
+        }
+      }
+      if (!ps.slots.length) ps.slots.push({ id: st.nextId++, name: '', vol: 1, offset: 0, has: false });
+      st.parts[k] = ps;
     }
-    if (!st.slots.length) st.slots.push({ id: st.nextId++, name: '', vol: 1, offset: 0, has: false });
     await DB.put(stKey(sid), st);
     let name = meta.name || file.name.replace(/\.[^.]+$/, '');
     if (sessions.list.some((x) => x.name === name)) name += ' (z pliku)';
@@ -2029,6 +2547,7 @@ function latencyEstimate(stream){
 async function startRecording(id){
   const target = slotById(id);
   if (!target) return;
+  if (seqPlaying) pauseSeq();
   const others = content().filter((s) => s.id !== id);
   const free = others.length === 0;
   if (!free && (renderDirty || !R)){ say('Chwila, przygotowuję podkład… Spróbuj za moment.'); return; }
@@ -2186,12 +2705,15 @@ function bounceUI(state){
   $('bounceDone').hidden = state !== 'done';
   $('bounceCancel').hidden = state === 'done';
   $('bounceNote').hidden = state === 'done';
-  $('bounceLoop').disabled = !loopActive();
+  $('bounceAll').disabled = !R || !content().length;
+  $('bounceLoop').disabled = !R || !loopActive();
+  $('bounceSeq').disabled = !sequence.length;
   $('bounceTitle').textContent = state === 'busy' ? 'Zgrywam do MP3…' : state === 'done' ? 'Gotowe: ' + bounceName : 'Co zgrać do MP3?';
 }
 function openBounce(){
   if (rec) return;
-  if (!R || renderDirty){ say(content().length ? 'Chwila, przeliczam ślady… Spróbuj za moment.' : 'Najpierw wczytaj albo nagraj ślad.'); return; }
+  if (!PARTS.some(partHas)){ say('Najpierw wczytaj albo nagraj ślad.'); return; }
+  if (content().length && (!R || renderDirty)){ say('Chwila, przeliczam ślady… Spróbuj za moment.'); return; }
   bounceUI('choose');
 }
 function cancelBounce(){
@@ -2231,22 +2753,70 @@ async function renderMix(a, n){
   }
   return out;
 }
-async function doBounce(onlyLoop){
-  if (!R) return;
-  const sr = R.sr, len = R.len;
-  let a = 0, b = len;
-  if (onlyLoop && loopActive()){ a = Math.max(0, Math.round(A / R.T * sr)); b = Math.min(len, Math.round(B / R.T * sr)); }
+async function renderSeqMix(){
+  const ok = await prepareSeq();
+  if (!ok) return null;
+  const pl = seqPlan();
+  if (!pl.plan.length) throw new Error('sekwencja jest pusta albo jej części nie mają nagrań');
+  if (pl.total > 20 * 60) throw new Error('sekwencja trwa ponad 20 minut');
+  const sr = SR(), n = Math.max(1, Math.round(pl.total * sr));
+  const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+  if (!OAC) throw new Error('ta przeglądarka nie obsługuje zgrywania sekwencji');
+  const oc = new OAC(1, n, sr);
+  const lim = setupLimiter(oc.createDynamicsCompressor());
+  lim.connect(oc.destination);
+  for (const st of pl.plan){
+    const part = parts[st.p];
+    for (const s of part.slots){
+      if (!hasContent(s) || !part.R || !part.R.bufs[s.id]) continue;
+      const v = effGainIn(part.slots, s);
+      if (!v) continue;
+      const gn = oc.createGain(); gn.gain.value = v; gn.connect(lim);
+      for (let r = 0; r < st.n; r++){
+        const t = st.gstart + r * st.len;
+        const src = oc.createBufferSource(); src.buffer = part.R.bufs[s.id];
+        const env = oc.createGain();
+        env.gain.setValueAtTime(0, t); env.gain.linearRampToValueAtTime(1, t + 0.002);
+        env.gain.setValueAtTime(1, t + Math.max(0.002, st.len - 0.002)); env.gain.linearRampToValueAtTime(0, t + st.len);
+        src.connect(env); env.connect(gn);
+        src.start(t, st.a, st.len);
+      }
+    }
+  }
+  const rendered = await new Promise((res, rej) => {
+    oc.oncomplete = (e) => res(e.renderedBuffer);
+    const p = oc.startRendering();
+    if (p && p.then) p.then(res, rej);
+  });
+  return new Float32Array(rendered.getChannelData(0));
+}
+async function doBounce(kind){
+  const onlyLoop = kind === 'loop';
+  let out, sr;
   bounceUI('busy');
   $('bounceBar').style.width = '0%'; $('bounceTxt').textContent = '0%';
-  const out = await renderMix(a, Math.max(1, b - a));
+  if (kind === 'seq'){
+    try { out = await renderSeqMix(); }
+    catch (e) { bounceUI('closed'); say('Nie udało się zgrać sekwencji: ' + (e && e.message ? e.message : e) + '.', true); return; }
+    if (!out){ bounceUI('closed'); return; }
+    sr = SR();
+  } else {
+    if (!R){ bounceUI('closed'); return; }
+    sr = R.sr;
+    const len = R.len;
+    let a = 0, b = len;
+    if (onlyLoop && loopActive()){ a = Math.max(0, Math.round(A / R.T * sr)); b = Math.min(len, Math.round(B / R.T * sr)); }
+    out = await renderMix(a, Math.max(1, b - a));
+  }
   let m = 0; for (let i = 0; i < out.length; i++){ const q = Math.abs(out[i]); if (q > m) m = q; }
   if (m > 0.99){ const k = 0.99 / m; for (let i = 0; i < out.length; i++) out[i] *= k; }
   const sm = sessMeta(curSid);
-  const parts = [sm ? sm.name : 'Looper ' + hhmm()];
-  if (onlyLoop && loopActive()) parts.push('pętla');
-  if (tempoPct) parts.push('tempo ' + (tempoPct > 0 ? '+' : '') + tempoPct + '%');
-  if (semi) parts.push((semi > 0 ? '+' : '') + semi + ' pt');
-  bounceName = safeName(parts.join(' ')) + '.mp3';
+  const nameParts = [sm ? sm.name : 'Looper ' + hhmm()];
+  if (kind === 'seq') nameParts.push('sekwencja');
+  else nameParts.push('część ' + curPart + (onlyLoop && loopActive() ? ' pętla' : ''));
+  if (tempoPct) nameParts.push('tempo ' + (tempoPct > 0 ? '+' : '') + tempoPct + '%');
+  if (semi) nameParts.push((semi > 0 ? '+' : '') + semi + ' pt');
+  bounceName = safeName(nameParts.join(' ')) + '.mp3';
   let worker;
   try { worker = new Worker('mp3-worker.js'); } catch (e) { say('Ta przeglądarka nie pozwala tu zgrać MP3.', true); bounceUI('closed'); return; }
   bounceWorker = worker;
@@ -2350,8 +2920,9 @@ $('tuneB').addEventListener('click', () => { tune = 'B'; ui(); });
 document.querySelectorAll('[data-d]').forEach((b) => b.addEventListener('click', () => nudge(parseFloat(b.dataset.d))));
 $('addTrack').addEventListener('click', addTrack);
 $('bounce').addEventListener('click', openBounce);
-$('bounceAll').addEventListener('click', () => doBounce(false));
-$('bounceLoop').addEventListener('click', () => doBounce(true));
+$('bounceAll').addEventListener('click', () => doBounce('part'));
+$('bounceLoop').addEventListener('click', () => doBounce('loop'));
+$('bounceSeq').addEventListener('click', () => doBounce('seq'));
 $('bounceCancel').addEventListener('click', cancelBounce);
 $('bounceClose').addEventListener('click', cancelBounce);
 $('bounceShare').addEventListener('click', () => { if (bounceBlob) shareBlob(bounceBlob, bounceName, 'audio/mpeg'); });
@@ -2361,26 +2932,27 @@ $('wipe').addEventListener('click', () => {
   const b = $('wipe');
   if (b.dataset.armed !== '1'){ b.dataset.armed = '1'; b.textContent = 'Na pewno?'; setTimeout(() => { b.dataset.armed = ''; b.textContent = 'Wyczyść'; }, 4000); return; }
   b.dataset.armed = ''; b.textContent = 'Wyczyść';
-  if (playing) pause();
-  for (const s of slots) if (curSid != null) DB.del(dKey(curSid, s.id)).catch(() => {});
-  slots = [newSlot()];
-  R = null; A = null; B = null; paused = 0; zoomed = false; shiftId = null; lastRec = null; locked = false;
+  resetRuntime();
+  for (const s of allSlots()) if (curSid != null) DB.del(dKey(curSid, s.id)).catch(() => {});
+  initParts(); sequence = [{ p: 'A', n: 1 }]; playMode = 'part';
   setTempo(0); setSemi(0);
+  lastSig = ''; lastMixSig = ''; lastDotSig = '';
   updateCanvasHeight(); resetView(); ui(); scheduleSave(true);
   say('Sesja wyczyszczona.');
 });
 
+function fxChanged(delay){ markAllDirty(); scheduleRender(delay); }
 const tempoEl = $('tempo'), semiEl = $('semi');
 tempoEl.addEventListener('input', () => setTempo(+tempoEl.value));
-tempoEl.addEventListener('change', () => { setTempo(+tempoEl.value); scheduleRender(120); });
+tempoEl.addEventListener('change', () => { setTempo(+tempoEl.value); fxChanged(120); });
 semiEl.addEventListener('input', () => setSemi(+semiEl.value));
-semiEl.addEventListener('change', () => { setSemi(+semiEl.value); scheduleRender(120); });
-$('tempoMinus').addEventListener('click', () => { setTempo(tempoPct - 1); scheduleRender(450); });
-$('tempoPlus').addEventListener('click', () => { setTempo(tempoPct + 1); scheduleRender(450); });
-$('tempoZero').addEventListener('click', () => { if (tempoPct !== 0){ setTempo(0); scheduleRender(0); } });
-$('semiMinus').addEventListener('click', () => { setSemi(semi - 1); scheduleRender(450); });
-$('semiPlus').addEventListener('click', () => { setSemi(semi + 1); scheduleRender(450); });
-$('semiZero').addEventListener('click', () => { if (semi !== 0){ setSemi(0); scheduleRender(0); } });
+semiEl.addEventListener('change', () => { setSemi(+semiEl.value); fxChanged(120); });
+$('tempoMinus').addEventListener('click', () => { setTempo(tempoPct - 1); fxChanged(450); });
+$('tempoPlus').addEventListener('click', () => { setTempo(tempoPct + 1); fxChanged(450); });
+$('tempoZero').addEventListener('click', () => { if (tempoPct !== 0){ setTempo(0); fxChanged(0); } });
+$('semiMinus').addEventListener('click', () => { setSemi(semi - 1); fxChanged(450); });
+$('semiPlus').addEventListener('click', () => { setSemi(semi + 1); fxChanged(450); });
+$('semiZero').addEventListener('click', () => { if (semi !== 0){ setSemi(0); fxChanged(0); } });
 
 /* ---------- loading files (audio or video) ---------- */
 function mixdown(buf){
@@ -2510,7 +3082,7 @@ try { if (navigator.storage && navigator.storage.persist) navigator.storage.pers
 /* ---------- start ---------- */
 try { getCtx(); } catch (e) { say('Ta przeglądarka nie obsługuje odtwarzania dźwięku przez Web Audio.', true); }
 updateFx(); setLearnUI(); setPreroll(preroll);
-slots = [newSlot()];
+initParts();
 updateCanvasHeight();
 ui();
 setCollapsed(tracksCollapsed);
@@ -2523,7 +3095,7 @@ setCollapsed(tracksCollapsed);
     say('');
   } catch (e) {
     sessions = { current: 1, nextSid: 2, list: [{ sid: 1, name: defaultSessName(), created: Date.now(), updated: Date.now(), tracks: 0 }] };
-    curSid = 1; slots = [newSlot()];
+    curSid = 1; initParts();
   }
   restoring = false;
   await writeState();
