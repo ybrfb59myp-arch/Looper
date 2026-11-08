@@ -102,6 +102,10 @@ input[type="text"]{-webkit-user-select:text;user-select:text;-webkit-touch-callo
 .part-seg .btn[aria-pressed="true"].has::after{background:var(--on-accent)}
 .mode-seg .btn{min-width:0;padding:6px 12px;font-size:.85rem}
 .parts-top .spacer{flex:1}
+.copy-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;border-radius:12px;background:var(--sunk);border:1px solid var(--line);font-size:.88rem;font-weight:700}
+.copy-row > span{flex:1 1 140px}
+.copy-targets{display:flex;gap:6px}
+.copy-targets .btn{min-width:52px;font-weight:800}
 .seq-body{display:flex;flex-direction:column;gap:10px}
 #partsCard.collapsed .seq-body{display:none}
 #partsCard.collapsed .collapse-btn svg{transform:rotate(180deg)}
@@ -236,6 +240,15 @@ canvas.locked{cursor:default}
 .play{min-height:64px;border-radius:16px;background:var(--ink);color:var(--bg);border-color:var(--ink)}
 
 /* tempo / key */
+.fx-body{display:flex;flex-direction:column;gap:10px}
+#fxCard.collapsed .fx-body{display:none}
+#fxCard.collapsed{padding:8px 12px}
+#fxCard.collapsed .collapse-btn svg{transform:rotate(180deg)}
+.fx-sum{flex:1;min-width:0;display:flex;align-items:baseline;gap:10px;background:none;border:0;padding:4px 0;font:inherit;color:var(--ink);cursor:pointer;text-align:left;-webkit-tap-highlight-color:transparent}
+.fx-sum-l{font-size:.78rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.fx-sum-v{font-size:.9rem;font-weight:800;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fx-sum-v.changed{color:var(--accent-ink)}
+.fx-sum:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:6px}
 .fx-item{display:flex;flex-direction:column;gap:2px}
 .fx-item + .fx-item{border-top:1px solid var(--line);padding-top:10px}
 .fx-head{display:flex;align-items:center;gap:10px}
@@ -331,12 +344,18 @@ body.recording #tracks .trk-name{pointer-events:none;opacity:.45}
         <button class="btn" type="button" data-part="B" aria-pressed="false">B</button>
         <button class="btn" type="button" data-part="C" aria-pressed="false">C</button>
       </div>
+      <button id="partCopy" class="btn xs" type="button" aria-label="Kopiuj tę część do innej" title="Kopiuj część"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" fill="none" stroke="currentColor" stroke-width="2"/></svg></button>
       <span class="spacer"></span>
       <div class="seg mode-seg" role="group" aria-label="Co odtwarzać">
         <button class="btn" type="button" data-mode="part" aria-pressed="true">Część</button>
         <button class="btn" type="button" data-mode="seq" aria-pressed="false">Sekwencja</button>
       </div>
       <button id="seqCollapse" class="btn collapse-btn" type="button" aria-label="Zwiń sekwencję"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 15l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+    <div id="copyRow" class="copy-row" hidden>
+      <span id="copyLabel">Kopiuj część A do:</span>
+      <div id="copyTargets" class="copy-targets"></div>
+      <button id="copyCancel" class="btn sm" type="button">Anuluj</button>
     </div>
     <div class="seq-body">
       <div id="seqStrip" class="seq-strip" aria-label="Sekwencja"></div>
@@ -439,7 +458,12 @@ body.recording #tracks .trk-name{pointer-events:none;opacity:.45}
     </div>
   </section>
 
-  <section class="card lockable" aria-label="Tempo i transpozycja">
+  <section id="fxCard" class="card lockable" aria-label="Tempo i transpozycja">
+    <div class="trk-top">
+      <button id="fxToggle" class="fx-sum" type="button" aria-expanded="true" aria-controls="fxBody"><span class="fx-sum-l">Tempo i tonacja</span><span id="fxSummary" class="fx-sum-v">bez zmian</span></button>
+      <button id="fxCollapse" class="btn collapse-btn" type="button" aria-label="Zwiń tempo i transpozycję"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 15l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    </div>
+    <div id="fxBody" class="fx-body">
     <div class="fx-item">
       <div class="fx-head">
         <label for="tempo">Tempo</label>
@@ -465,6 +489,7 @@ body.recording #tracks .trk-name{pointer-events:none;opacity:.45}
       </div>
       <input id="semi" type="range" min="-7" max="7" step="1" value="0">
       <div class="scale"><span>−7</span><span>0</span><span>+7</span></div>
+    </div>
     </div>
     <div id="busy" class="busy" role="status" hidden>
       <div class="bar"><span id="busyBar"></span></div><span id="busyTxt">Przeliczam…</span>
@@ -493,7 +518,13 @@ body.recording #tracks .trk-name{pointer-events:none;opacity:.45}
         </div>
       </div>
       <div class="set-row">
-        <span>Wyczyść sesję<small>Usuwa wszystkie ślady z bieżącej sesji.</small></span>
+        <span>Kopia zapasowa<small>Wszystkie sesje w jednym pliku: przed usunięciem aplikacji albo do przeniesienia na nowe urządzenie.</small></span>
+        <button id="backupBtn" class="btn sm" type="button">Zapisz kopię</button>
+        <button id="restoreBtn" class="btn sm" type="button">Przywróć</button>
+        <input id="restoreIn" type="file" hidden>
+      </div>
+      <div class="set-row">
+        <span>Wyczyść sesję<small>Usuwa wszystkie ślady ze wszystkich części bieżącej sesji.</small></span>
         <button id="wipe" class="btn sm warn" type="button">Wyczyść</button>
       </div>
     </div>
@@ -511,9 +542,11 @@ body.recording #tracks .trk-name{pointer-events:none;opacity:.45}
         <li><strong>Pętla:</strong> przeciągnij palcem po przebiegu, a potem dostrój A i B przyciskami ±. Znaczniki A i B możesz też przeciągać. <strong>Kłódka</strong> blokuje pętlę i przebieg przed przypadkowym dotknięciem (przewijanie działa dalej).</li>
         <li><strong>Tempo i transpozycja</strong> działają na wszystkie ślady. Tempo zmienia się bez zmiany wysokości dźwięku, a transpozycja bez zmiany tempa.</li>
         <li><strong>Części A, B, C:</strong> każda ma własne ślady, nagrania, pętlę i mikser. Tempo i transpozycja są wspólne. Kropka przy literze oznacza, że część ma nagrania.</li>
+        <li><strong>Kopiowanie części:</strong> przycisk z dwoma kwadracikami obok liter kopiuje całą bieżącą część (ślady, pętlę, mikser) do innej. Potem podmieniasz w kopii tylko tę partię, którą chcesz zmienić.</li>
         <li><strong>Sekwencja:</strong> klocki typu A×4, B×2. Stuknij klocek, żeby kółkiem wybrać część i liczbę powtórzeń (1–32), albo <strong>+</strong>, żeby dodać nowy. Przełącz na <strong>Sekwencja</strong> i stuknij ▶: każda część gra swoją pętlę (albo całość, gdy pętli nie ma) tyle razy, ile ustawisz, a po ostatnim klocku wszystko wraca na początek.</li>
         <li><strong>Sesje:</strong> stuknij nazwę sesji na górze, żeby otworzyć listę, założyć nową, zrobić kopię albo wysłać sesję jako plik na drugie urządzenie. Wszystko zapisuje się samo.</li>
         <li><strong>Eksportuj MP3</strong> zgrywa wszystko tak, jak słyszysz. W menu udostępniania wybierz Messengera albo Zachowaj w Plikach.</li>
+        <li><strong>Kopia zapasowa</strong> (w Ustawieniach) zapisuje wszystkie sesje w jednym pliku. Zrób ją przed usunięciem aplikacji z ekranu. Przywrócisz ją przyciskiem Przywróć albo przez Otwórz plik sesji.</li>
         <li>Aplikacja działa bez internetu. Brak dźwięku? Sprawdź, czy telefon nie jest w trybie cichym.</li>
       </ol>
     </div>
@@ -899,6 +932,29 @@ function getCtx(){
   }
   return ctx;
 }
+/* iPadOS/iOS can leave the audio engine frozen after the app was minimised.
+   On the first touch after coming back we wake it, or swap in a fresh one. */
+let ctxStale = false, hiddenAt = 0;
+function freshCtx(){
+  const old = ctx;
+  srcs = []; gains = {};
+  ctx = null; master = null; workletLoaded = false;
+  try { if (old && old.state !== 'closed') old.close(); } catch (e) {}
+  return getCtx();
+}
+function wakeAudio(){
+  if (!ctx){ getCtx(); }
+  const busy = playing || seqPlaying || rec || recStarting;
+  if (!busy && (ctxStale || ctx.state === 'interrupted' || ctx.state === 'closed')){ ctxStale = false; freshCtx(); }
+  if (!rec && !recStarting) setSession('playback');
+  if (ctx.state !== 'running'){ try { const r = ctx.resume(); if (r && r.catch) r.catch(() => {}); } catch (e) {} }
+}
+['touchend', 'click', 'keydown'].forEach((ev) => document.addEventListener(ev, wakeAudio, true));
+// After ▶: if the clock does not move, the engine is stuck — replace it and try again.
+function watchClock(onStuck){
+  const c = ctx, t = c ? c.currentTime : 0;
+  setTimeout(() => { if (ctx === c && c && c.currentTime - t < 0.05) onStuck(); }, 800);
+}
 const SR = () => getCtx().sampleRate;
 
 function timelineDur(){
@@ -1189,6 +1245,16 @@ function startAt(tau, opts){
   t0 = when; off0 = offB; playing = true; playR = R;
   keepAwake(true);
   ui(); kick();
+  if (!opts.noWatch && !opts.retried){
+    const tok = token, tau0 = offB * T;
+    watchClock(() => {
+      if (token !== tok || !playing || rec) return;
+      killSources(); playing = false; paused = tau0;
+      freshCtx();
+      if (ctx.state === 'running') startAt(tau0, Object.assign({}, opts, { retried: true }));
+      else { ui(); say('Dźwięk się zawiesił po powrocie do aplikacji. Stuknij ▶ jeszcze raz.', true); }
+    });
+  }
   return true;
 }
 
@@ -1348,6 +1414,14 @@ async function startSeq(g){
     seqFollow = null;
     keepAwake(true);
     ui(); kick();
+    const myseq = seq, g0 = g;
+    watchClock(() => {
+      if (seq !== myseq || !seqPlaying) return;
+      stopSeqNodes(); seqPlaying = false; seqPausedG = g0;
+      freshCtx();
+      if (ctx.state === 'running') startSeq(g0);
+      else { ui(); say('Dźwięk się zawiesił po powrocie do aplikacji. Stuknij ▶ jeszcze raz.', true); }
+    });
   } finally { seqStarting = false; }
 }
 function pauseSeq(){
@@ -1478,8 +1552,25 @@ function setSemi(v){ semi = clamp(Math.round(v), -7, 7); $('semi').value = semi;
 function updateFx(){
   $('tempoV').textContent = tempoPct === 0 ? 'bez zmian' : signed(tempoPct, 0) + '%';
   $('semiV').textContent = semiLabel(semi);
+  const bits = [];
+  if (tempoPct) bits.push('tempo ' + signed(tempoPct, 0) + '%');
+  if (semi) bits.push(semiLabel(semi));
+  const sum = $('fxSummary');
+  sum.textContent = bits.length ? bits.join(' · ') : 'bez zmian';
+  sum.classList.toggle('changed', bits.length > 0);
   scheduleSave();
 }
+let fxCollapsed = true;
+try { const v = localStorage.getItem('looper.fxCollapsed'); if (v != null) fxCollapsed = v === '1'; } catch (e) {}
+function setFxCollapsed(v){
+  fxCollapsed = v;
+  try { localStorage.setItem('looper.fxCollapsed', v ? '1' : '0'); } catch (e) {}
+  $('fxCard').classList.toggle('collapsed', v);
+  $('fxToggle').setAttribute('aria-expanded', String(!v));
+  $('fxCollapse').setAttribute('aria-label', v ? 'Rozwiń tempo i transpozycję' : 'Zwiń tempo i transpozycję');
+}
+$('fxToggle').addEventListener('click', () => setFxCollapsed(!fxCollapsed));
+$('fxCollapse').addEventListener('click', () => setFxCollapsed(!fxCollapsed));
 
 function applyGains(){
   if (!ctx) return;
@@ -2215,6 +2306,144 @@ $('seqCollapse').addEventListener('click', () => {
 buildWheel('wheelPart', PARTS);
 buildWheel('wheelCount', Array.from({ length: 32 }, (_, i) => String(i + 1)));
 
+/* ---------- copy a whole part (tracks, loop, mixer) into another ---------- */
+let copyArm = null;
+function renderCopyRow(){
+  $('copyLabel').textContent = 'Kopiuj część ' + curPart + ' do:';
+  $('copyTargets').innerHTML = PARTS.filter((k) => k !== curPart).map((k) =>
+    '<button class="btn sm' + (copyArm === k ? ' warn' : '') + '" type="button" data-copyto="' + k + '">' + (copyArm === k ? 'Zastąpić ' + k + '?' : k) + '</button>').join('');
+}
+function openCopy(){
+  if (rec || recStarting) return;
+  stashPart();
+  if (!partHas(curPart)){ say('Ta część jest pusta, nie ma czego kopiować.'); return; }
+  copyArm = null;
+  $('copyRow').hidden = false;
+  renderCopyRow();
+}
+function copyPart(from, to){
+  if (seqPlaying) pauseSeq();
+  if (playing) pause();
+  stashPart();
+  const src = parts[from], dst = parts[to];
+  for (const sl of dst.slots) if (curSid != null) DB.del(dKey(curSid, sl.id)).catch(() => {});
+  const map = {};
+  const fresh = src.slots.map((sl) => { const n = Object.assign({}, sl, { id: nextId++, open: false }); map[sl.id] = n.id; return n; });
+  dst.slots = fresh;
+  dst.A = src.A; dst.B = src.B; dst.loopOn = src.loopOn !== false; dst.locked = !!src.locked;
+  dst.paused = src.A != null ? src.A : 0; dst.tune = 'A'; dst.lastRec = null;
+  if (src.R){
+    const bufs = {};
+    for (const k of Object.keys(src.R.bufs)) if (map[k] != null) bufs[map[k]] = src.R.bufs[k];
+    dst.R = Object.assign({}, src.R, { bufs }); dst.renderDirty = !!src.renderDirty;
+  } else { dst.R = null; dst.renderDirty = true; }
+  for (const sl of fresh) if (hasContent(sl) && curSid != null) DB.put(dKey(curSid, sl.id), slotSrc(sl)).catch(() => {});
+  scheduleSave(true);
+  lastStripSig = '';
+  if (to === curPart){
+    applyPart(to);
+    lastSig = ''; lastMixSig = ''; lastDotSig = '';
+    updateCanvasHeight(); resetView(); ui();
+  } else switchPart(to);
+  say('Część ' + from + ' skopiowana do ' + to + '. Teraz możesz w niej podmienić wybraną partię.');
+}
+$('partCopy').addEventListener('click', () => { if ($('copyRow').hidden) openCopy(); else { $('copyRow').hidden = true; copyArm = null; } });
+$('copyCancel').addEventListener('click', () => { $('copyRow').hidden = true; copyArm = null; });
+$('copyTargets').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-copyto]');
+  if (!b) return;
+  const k = b.dataset.copyto;
+  if (partHas(k) && copyArm !== k){
+    copyArm = k; renderCopyRow();
+    setTimeout(() => { if (copyArm === k){ copyArm = null; if (!$('copyRow').hidden) renderCopyRow(); } }, 4000);
+    return;
+  }
+  copyArm = null; $('copyRow').hidden = true;
+  copyPart(curPart, k);
+});
+
+/* ---------- backup of every session in one file ("LOOPERB1") ---------- */
+let backupBlob = null, backupTimer = 0;
+async function buildBackup(){
+  clearTimeout(saveTimer); await writeState();
+  const out = { format: 'looper-backup', version: 1, created: Date.now(), sessions: [] };
+  const payloads = [];
+  for (const m of sessions.list){
+    const st = await DB.get(stKey(m.sid)).catch(() => null);
+    if (!st) continue;
+    const items = [];
+    for (const id of stSlotIds(st)){
+      const src = await DB.get(dKey(m.sid, id)).catch(() => null);
+      if (!src || !src.data) continue;
+      const bytes = new Uint8Array(src.data);
+      items.push({ id, kind: src.kind, sr: src.sr || null, name: src.name || '', bytes: bytes.length });
+      payloads.push(bytes);
+    }
+    out.sessions.push({ name: m.name, created: m.created, updated: m.updated, tracks: m.tracks || 0, state: st, items });
+  }
+  const json = new TextEncoder().encode(JSON.stringify(out));
+  const head = new Uint8Array(12);
+  head.set([76, 79, 79, 80, 69, 82, 66, 49]);
+  new DataView(head.buffer).setUint32(8, json.length, true);
+  return new Blob([head, json].concat(payloads), { type: 'application/octet-stream' });
+}
+async function restoreBackup(buf){
+  const u8 = new Uint8Array(buf);
+  const jl = new DataView(buf).getUint32(8, true);
+  const meta = JSON.parse(new TextDecoder().decode(u8.subarray(12, 12 + jl)));
+  let p = 12 + jl, n = 0;
+  clearTimeout(saveTimer); await writeState();
+  for (const ss of (meta.sessions || [])){
+    const sid = sessions.nextSid++;
+    for (const it of (ss.items || [])){
+      const data = buf.slice(p, p + it.bytes); p += it.bytes;
+      await DB.put(dKey(sid, it.id), it.kind === 'file' ? { kind: 'file', name: it.name, data } : { kind: 'pcm', sr: it.sr, name: it.name, data });
+    }
+    await DB.put(stKey(sid), ss.state);
+    let name = ss.name || 'Sesja';
+    if (sessions.list.some((x) => x.name === name)) name += ' (z kopii)';
+    sessions.list.push({ sid, name, created: ss.created || Date.now(), updated: ss.updated || Date.now(), tracks: ss.tracks || 0 });
+    n++;
+  }
+  await saveIndex();
+  renderSessions();
+  say('Przywrócono ' + n + ' ' + (n === 1 ? 'sesję' : (n >= 2 && n <= 4) ? 'sesje' : 'sesji') + '. Znajdziesz je na liście sesji (stuknij nazwę sesji u góry).');
+}
+async function openLooperFile(file){
+  if (!file) return;
+  let magic = '';
+  try { magic = String.fromCharCode.apply(null, new Uint8Array(await file.slice(0, 8).arrayBuffer())); } catch (e) {}
+  if (magic === 'LOOPERB1'){
+    say('Przywracam kopię…', false, true);
+    try { await restoreBackup(await file.arrayBuffer()); }
+    catch (e) { say('Nie udało się przywrócić kopii: ' + (e && e.message ? e.message : e) + '.', true); }
+    return;
+  }
+  if (magic === 'LOOPERS1') return importSessionFile(file);
+  say('To nie jest plik Loopera (sesji ani kopii zapasowej).', true);
+}
+$('backupBtn').addEventListener('click', async () => {
+  const b = $('backupBtn');
+  if (backupBlob){
+    const d = new Date();
+    shareBlob(backupBlob, 'Looper kopia ' + d.getDate() + '.' + (d.getMonth() + 1) + '.' + d.getFullYear() + '.looper', 'application/octet-stream');
+    return;
+  }
+  b.disabled = true; b.textContent = 'Przygotowuję…';
+  try {
+    backupBlob = await buildBackup();
+    b.textContent = 'Udostępnij kopię (' + (backupBlob.size / 1e6).toFixed(1).replace('.', ',') + ' MB)';
+    clearTimeout(backupTimer);
+    backupTimer = setTimeout(() => { backupBlob = null; b.textContent = 'Zapisz kopię'; }, 180000);
+  } catch (e) {
+    backupBlob = null; b.textContent = 'Zapisz kopię';
+    say('Nie udało się przygotować kopii.', true);
+  }
+  b.disabled = false;
+});
+$('restoreBtn').addEventListener('click', () => $('restoreIn').click());
+$('restoreIn').addEventListener('change', (e) => { const f = e.target.files && e.target.files[0]; e.target.value = ''; openLooperFile(f); });
+
 /* ---------- sessions ---------- */
 function resetRuntime(){
   if (playing) pause();
@@ -2493,7 +2722,7 @@ async function importSessionFile(file){
 }
 $('sessExport').addEventListener('click', () => { if (!rec) exportSession(); });
 $('sessImport').addEventListener('click', () => { if (!rec) $('sessFileIn').click(); });
-$('sessFileIn').addEventListener('change', (e) => { const f = e.target.files && e.target.files[0]; e.target.value = ''; importSessionFile(f); });
+$('sessFileIn').addEventListener('change', (e) => { const f = e.target.files && e.target.files[0]; e.target.value = ''; openLooperFile(f); });
 
 async function initSessions(){
   let idx = await DB.get('sessions').catch(() => null);
@@ -3034,7 +3263,7 @@ document.addEventListener('drop', (e) => {
   tracksCard.classList.remove('drop');
   const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
   if (!f || rec) return;
-  if (/\.looper$/i.test(f.name)){ importSessionFile(f); return; }
+  if (/\.looper$/i.test(f.name)){ openLooperFile(f); return; }
   let s = slots.find((x) => !hasContent(x));
   if (!s && slots.length < MAX_TRACKS){ s = newSlot(); slots.push(s); updateCanvasHeight(); }
   if (!s) s = slots[0];
@@ -3059,12 +3288,20 @@ document.addEventListener('keydown', (e) => {
 });
 
 /* ---------- housekeeping ---------- */
+let swReg = null;
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden) return;
+  if (!document.hidden){
+    if (Date.now() - hiddenAt > 400) ctxStale = true;
+    if (swReg){ try { swReg.update(); } catch (e) {} }
+    return;
+  }
+  hiddenAt = Date.now();
   if (rec) stopRecording();
+  else if (seqPlaying) pauseSeq();
   else if (playing) pause();
   clearTimeout(saveTimer); if (!restoring) writeState();
 });
+window.addEventListener('pageshow', (e) => { if (e.persisted) ctxStale = true; });
 if (window.ResizeObserver) new ResizeObserver(resize).observe(canvas);
 window.addEventListener('resize', () => updateCanvasHeight());
 try { window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', draw); } catch (e) {}
@@ -3073,7 +3310,7 @@ window.addEventListener('online', netUI); window.addEventListener('offline', net
 
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
   const hadController = !!navigator.serviceWorker.controller;
-  navigator.serviceWorker.register('sw.js').then((reg) => { try { reg.update(); } catch (e) {} }).catch(() => {});
+  navigator.serviceWorker.register('sw.js').then((reg) => { swReg = reg; try { reg.update(); } catch (e) {} }).catch(() => {});
   navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadController) $('update').hidden = false; });
   $('reload').addEventListener('click', () => location.reload());
 }
@@ -3086,6 +3323,7 @@ initParts();
 updateCanvasHeight();
 ui();
 setCollapsed(tracksCollapsed);
+setFxCollapsed(fxCollapsed);
 (async () => {
   try {
     await initSessions();
