@@ -248,6 +248,8 @@ canvas.locked{cursor:default}
 .fx-sum-l{font-size:.78rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
 .fx-sum-v{font-size:.9rem;font-weight:800;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .fx-sum-v.changed{color:var(--accent-ink)}
+@media (max-width:460px){#fxCard.fx-changed .fx-lbl{display:none}#fxCard.fx-changed .fx-part{margin-left:0}}
+.fx-part{display:inline-grid;place-items:center;min-width:1.55em;height:1.55em;margin-left:.45em;padding:0 .3em;border-radius:6px;background:var(--accent);color:var(--on-accent);font-size:.82rem;letter-spacing:0;vertical-align:1px}
 .fx-sum:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:6px}
 .fx-item{display:flex;flex-direction:column;gap:2px}
 .fx-item + .fx-item{border-top:1px solid var(--line);padding-top:10px}
@@ -460,7 +462,7 @@ body.recording #tracks .trk-name{pointer-events:none;opacity:.45}
 
   <section id="fxCard" class="card lockable" aria-label="Tempo i transpozycja">
     <div class="trk-top">
-      <button id="fxToggle" class="fx-sum" type="button" aria-expanded="true" aria-controls="fxBody"><span class="fx-sum-l">Tempo i tonacja</span><span id="fxSummary" class="fx-sum-v">bez zmian</span></button>
+      <button id="fxToggle" class="fx-sum" type="button" aria-expanded="true" aria-controls="fxBody"><span class="fx-sum-l"><span class="fx-lbl">Tempo i tonacja</span><b id="fxPart" class="fx-part" title="Ustawienia tej części">A</b></span><span id="fxSummary" class="fx-sum-v">bez zmian</span></button>
       <button id="fxCollapse" class="btn collapse-btn" type="button" aria-label="Zwiń tempo i transpozycję"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 15l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     </div>
     <div id="fxBody" class="fx-body">
@@ -540,8 +542,8 @@ body.recording #tracks .trk-name{pointer-events:none;opacity:.45}
         <li><strong>Odtwarzanie:</strong> żółty przycisk startuje od A, gdy jest pętla, a bez pętli od początku. <strong>−10 / −5 / +5 / +10</strong> przeskakują o sekundy. Przy włączonej pętli przeskoki zostają w pętli.</li>
         <li>Ślady 2–4 przesuwasz strzałkami względem śladu 1: <strong>‹ ›</strong> o 10 ms, <strong>‹‹ ››</strong> o 100 ms. Gdy poprawiasz świeże nagranie, aplikacja zapamiętuje poprawkę i stosuje ją do kolejnych nagrań.</li>
         <li><strong>Pętla:</strong> przeciągnij palcem po przebiegu, a potem dostrój A i B przyciskami ±. Znaczniki A i B możesz też przeciągać. <strong>Kłódka</strong> blokuje pętlę i przebieg przed przypadkowym dotknięciem (przewijanie działa dalej).</li>
-        <li><strong>Tempo i transpozycja</strong> działają na wszystkie ślady. Tempo zmienia się bez zmiany wysokości dźwięku, a transpozycja bez zmiany tempa.</li>
-        <li><strong>Części A, B, C:</strong> każda ma własne ślady, nagrania, pętlę i mikser. Tempo i transpozycja są wspólne. Kropka przy literze oznacza, że część ma nagrania.</li>
+        <li><strong>Tempo i transpozycja</strong> działają na wszystkie ślady otwartej części. Każda część (A, B, C) ma własne tempo i tonację, a sekwencja gra każdą część w jej ustawieniach. Tempo zmienia się bez zmiany wysokości dźwięku, a transpozycja bez zmiany tempa.</li>
+        <li><strong>Części A, B, C:</strong> każda ma własne ślady, nagrania, pętlę, mikser, tempo i tonację. Kopiowanie części przenosi też jej tempo i tonację. Kropka przy literze oznacza, że część ma nagrania.</li>
         <li><strong>Kopiowanie części:</strong> przycisk z dwoma kwadracikami obok liter kopiuje całą bieżącą część (ślady, pętlę, mikser) do innej. Potem podmieniasz w kopii tylko tę partię, którą chcesz zmienić.</li>
         <li><strong>Sekwencja:</strong> klocki typu A×4, B×2. Stuknij klocek, żeby kółkiem wybrać część i liczbę powtórzeń (1–32), albo <strong>+</strong>, żeby dodać nowy. Przełącz na <strong>Sekwencja</strong> i stuknij ▶: każda część gra swoją pętlę (albo całość, gdy pętli nie ma) tyle razy, ile ustawisz, a po ostatnim klocku wszystko wraca na początek.</li>
         <li><strong>Sesje:</strong> stuknij nazwę sesji na górze, żeby otworzyć listę, założyć nową, zrobić kopię albo wysłać sesję jako plik na drugie urządzenie. Wszystko zapisuje się samo.</li>
@@ -1025,7 +1027,7 @@ function saveSlotData(s){
 }
 /* ---------- parts A / B / C (each has its own tracks, loop and render) ---------- */
 const PARTS = ['A', 'B', 'C'];
-const blankPart = () => ({ slots: [newSlot()], R: null, renderDirty: false, A: null, B: null, loopOn: true, locked: false, paused: 0, tune: 'A', lastRec: null });
+const blankPart = () => ({ slots: [newSlot()], R: null, renderDirty: false, A: null, B: null, loopOn: true, locked: false, paused: 0, tune: 'A', lastRec: null, tempoPct: 0, semi: 0 });
 let parts = {};
 let curPart = 'A';
 let playMode = 'part';                 // 'part' | 'seq'
@@ -1033,7 +1035,7 @@ let sequence = [{ p: 'A', n: 1 }];
 function stashPart(){
   const p = parts[curPart];
   if (!p) return;
-  Object.assign(p, { slots, R, renderDirty, A, B, loopOn, locked, paused, tune, lastRec });
+  Object.assign(p, { slots, R, renderDirty, A, B, loopOn, locked, paused, tune, lastRec, tempoPct, semi });
 }
 function applyPart(k){
   const p = parts[k];
@@ -1041,18 +1043,22 @@ function applyPart(k){
   slots = p.slots; R = p.R; renderDirty = !!p.renderDirty;
   A = p.A; B = p.B; loopOn = p.loopOn !== false; locked = !!p.locked;
   paused = p.paused || 0; tune = p.tune || 'A'; lastRec = p.lastRec || null;
+  tempoPct = p.tempoPct || 0; semi = p.semi || 0;
   shiftId = null; zoomed = false; drag = null; armed = null;
 }
 function initParts(){ parts = {}; for (const k of PARTS) parts[k] = blankPart(); curPart = 'A'; applyPart('A'); }
 const partHas = (k) => parts[k] && parts[k].slots.some(hasContent);
 const curT = () => 1 + tempoPct / 100;
 const curP = () => Math.pow(2, semi / 12);
+const partT = (k) => 1 + ((parts[k] && parts[k].tempoPct) || 0) / 100;
+const partP = (k) => Math.pow(2, ((parts[k] && parts[k].semi) || 0) / 12);
+const fxVal = (v, dflt, lo, hi) => clamp(Math.round(+(v != null ? v : dflt) || 0), lo, hi);
 
 const slotMeta = (s) => ({ id: s.id, name: s.name, vol: s.vol, trim: s.trim || 1, offset: s.offset, has: hasContent(s), mute: !!s.mute, solo: !!s.solo });
 function stateObj(){
   stashPart();
   const ps = {};
-  for (const k of PARTS){ const p = parts[k]; ps[k] = { A: p.A, B: p.B, loopOn: p.loopOn !== false, locked: !!p.locked, slots: p.slots.map(slotMeta) }; }
+  for (const k of PARTS){ const p = parts[k]; ps[k] = { A: p.A, B: p.B, loopOn: p.loopOn !== false, locked: !!p.locked, tempoPct: p.tempoPct || 0, semi: p.semi || 0, slots: p.slots.map(slotMeta) }; }
   return { v: 4, nextId, tempoPct, semi, curPart, playMode, sequence: sequence.map((x) => ({ p: x.p, n: x.n })), parts: ps };
 }
 const allSlots = () => { stashPart(); const out = []; for (const k of PARTS) for (const s of parts[k].slots) out.push(s); return out; };
@@ -1087,15 +1093,17 @@ function scheduleRender(delay){
 }
 function markAllDirty(){ stashPart(); for (const k of PARTS) parts[k].renderDirty = true; }
 
-// Render one list of tracks at the current tempo / key. Returns null when aborted.
-async function renderList(list, alive, label){
+// Render one list of tracks at a part's tempo / key (default: the open part). Returns null when aborted.
+async function renderList(list, alive, label, tp, sm){
+  if (tp == null) tp = tempoPct;
+  if (sm == null) sm = semi;
   const c = getCtx(), sr = c.sampleRate;
-  const T = curT(), P = curP();
+  const T = 1 + tp / 100, P = Math.pow(2, sm / 12);
   let D = 0;
   for (const s of list) D = Math.max(D, s.offset + s.dur);
   D = Math.max(D, 0.1);
   const Lout = Math.max(1, Math.round(D * sr / T));
-  const neutral = tempoPct === 0 && semi === 0;
+  const neutral = tp === 0 && sm === 0;
   if (!neutral){ setBusy(0, label); await nextTick(); if (!alive()) return null; }
   const bufs = {};
   for (const s of list) bufs[s.id] = c.createBuffer(1, Lout, sr);
@@ -1106,7 +1114,7 @@ async function renderList(list, alive, label){
     let tk = performance.now();
     for (const s of list){
       const o = Math.round(s.offset * sr);
-      if (semi === 0){ Ys.push(s.raw); Os.push(o); }
+      if (sm === 0){ Ys.push(s.raw); Os.push(o); }
       else {
         const y = new Float32Array(resampleLen(s.raw.length, P));
         for (const f of resampleGen(s.raw, P, y)){
@@ -1127,6 +1135,7 @@ async function renderList(list, alive, label){
 async function doRender(){
   if (rec || recStarting){ scheduleRender(500); return; }
   const gen = ++renderGen;
+  const k = curPart;
   const list = content();
   if (!list.length){ R = null; renderDirty = false; stashPart(); setBusy(null); if (playing) pause(); ui(); return; }
   let r;
@@ -1137,6 +1146,7 @@ async function doRender(){
   }
   if (!r || gen !== renderGen) return;
   setBusy(null);
+  if (curPart !== k){ parts[k].R = r; parts[k].renderDirty = false; return; }
   const wasPlaying = playing;
   const tau = pos();
   R = r; renderDirty = false;
@@ -1151,8 +1161,8 @@ async function ensureRendered(k){
   const p = parts[k];
   const list = p.slots.filter(hasContent);
   if (!list.length){ p.R = null; p.renderDirty = false; return null; }
-  if (p.R && !p.renderDirty && p.R.T === curT() && p.R.P === curP() && list.every((s) => p.R.bufs[s.id])) return p.R;
-  const r = await renderList(list, () => true, 'Przeliczam część ' + k + '…');
+  if (p.R && !p.renderDirty && p.R.T === partT(k) && p.R.P === partP(k) && list.every((s) => p.R.bufs[s.id])) return p.R;
+  const r = await renderList(list, () => true, 'Przeliczam część ' + k + '…', p.tempoPct || 0, p.semi || 0);
   setBusy(null);
   p.R = r; p.renderDirty = false;
   if (k === curPart){ R = r; renderDirty = false; }
@@ -1434,8 +1444,13 @@ function pauseSeq(){
 function restartSeqKeepingPlace(){
   if (!seqPlaying || !seq) return;
   const cur = seqCurrent();
-  const oldT = cur ? cur.seg.T : curT();
-  startSeq(seqPosG() * oldT / curT());
+  let g = seqPosG();
+  if (cur){
+    stashPart();
+    const st = seqPlan().plan.find((x) => x.idx === cur.seg.idx);
+    if (st) g = st.gstart + Math.min(cur.seg.r, st.n - 1) * st.len + clamp(cur.tau / st.T - st.a, 0, Math.max(0, st.len - 0.03));
+  }
+  startSeq(g);
 }
 function seqEdited(){ if (seqPlaying) startSeq(seqPosG()); }
 
@@ -1549,7 +1564,9 @@ function toggleLock(){
 /* ---------- tempo, key, volume, offset ---------- */
 function setTempo(v){ tempoPct = clamp(Math.round(v), -50, 50); $('tempo').value = tempoPct; updateFx(); }
 function setSemi(v){ semi = clamp(Math.round(v), -7, 7); $('semi').value = semi; updateFx(); }
-function updateFx(){
+function syncFx(){ $('tempo').value = tempoPct; $('semi').value = semi; updateFx(true); }
+function updateFx(noSave){
+  $('fxPart').textContent = curPart;
   $('tempoV').textContent = tempoPct === 0 ? 'bez zmian' : signed(tempoPct, 0) + '%';
   $('semiV').textContent = semiLabel(semi);
   const bits = [];
@@ -1558,7 +1575,8 @@ function updateFx(){
   const sum = $('fxSummary');
   sum.textContent = bits.length ? bits.join(' · ') : 'bez zmian';
   sum.classList.toggle('changed', bits.length > 0);
-  scheduleSave();
+  $('fxCard').classList.toggle('fx-changed', bits.length > 0);
+  if (!noSave) scheduleSave();
 }
 let fxCollapsed = true;
 try { const v = localStorage.getItem('looper.fxCollapsed'); if (v != null) fxCollapsed = v === '1'; } catch (e) {}
@@ -2159,6 +2177,7 @@ function switchPart(k, opts){
   const pv = $('partView');
   const doSwitch = () => {
     applyPart(k);
+    syncFx();
     lastSig = ''; lastMixSig = ''; lastDotSig = '';
     if (bounceWorker == null) bounceUI('closed');
     updateCanvasHeight(); resetView();
@@ -2332,6 +2351,7 @@ function copyPart(from, to){
   dst.slots = fresh;
   dst.A = src.A; dst.B = src.B; dst.loopOn = src.loopOn !== false; dst.locked = !!src.locked;
   dst.paused = src.A != null ? src.A : 0; dst.tune = 'A'; dst.lastRec = null;
+  dst.tempoPct = src.tempoPct || 0; dst.semi = src.semi || 0;
   if (src.R){
     const bufs = {};
     for (const k of Object.keys(src.R.bufs)) if (map[k] != null) bufs[map[k]] = src.R.bufs[k];
@@ -2342,6 +2362,7 @@ function copyPart(from, to){
   lastStripSig = '';
   if (to === curPart){
     applyPart(to);
+    syncFx();
     lastSig = ''; lastMixSig = ''; lastDotSig = '';
     updateCanvasHeight(); resetView(); ui();
   } else switchPart(to);
@@ -2495,7 +2516,7 @@ async function loadSession(sid){
   nextId = 1;
   initParts();
   sequence = [{ p: 'A', n: 1 }]; playMode = 'part';
-  if (!st){ setTempo(0); setSemi(0); return; }
+  if (!st){ syncFx(); return; }
   const psrc = (st.v >= 4 && st.parts) ? st.parts
     : { A: { A: st.A, B: st.B, loopOn: st.loopOn, locked: st.locked, slots: st.slots || [] } };
   let maxId = (st.nextId || 1) - 1;
@@ -2511,13 +2532,15 @@ async function loadSession(sid){
       p.loopOn = ps.loopOn !== false; p.locked = !!ps.locked;
       p.paused = p.A != null ? p.A : 0;
     }
+    p.tempoPct = fxVal(ps && ps.tempoPct, st.tempoPct, -50, 50);
+    p.semi = fxVal(ps && ps.semi, st.semi, -7, 7);
     parts[k] = p;
   }
   if (Array.isArray(st.sequence) && st.sequence.length) sequence = st.sequence.map((x) => ({ p: PARTS.includes(x.p) ? x.p : 'A', n: clamp((x.n | 0) || 1, 1, 32) }));
   else if (st.v >= 4) sequence = [];
   playMode = st.playMode === 'seq' ? 'seq' : 'part';
-  setTempo(st.tempoPct || 0); setSemi(st.semi || 0);
   applyPart(PARTS.includes(st.curPart) ? st.curPart : 'A');
+  syncFx();
   clampMarks();
 }
 
@@ -2558,7 +2581,7 @@ async function newSession(name){
   restoring = true;
   resetRuntime();
   curSid = sid; sessions.current = sid;
-  nextId = 1; initParts(); sequence = [{ p: 'A', n: 1 }]; playMode = 'part'; setTempo(0); setSemi(0);
+  nextId = 1; initParts(); sequence = [{ p: 'A', n: 1 }]; playMode = 'part'; syncFx();
   restoring = false;
   await writeState();
   afterLoad();
@@ -2658,7 +2681,7 @@ function exportSession(){
   const payloads = [];
   for (const k of PARTS){
     const p = parts[k];
-    const pm = { A: p.A, B: p.B, loopOn: p.loopOn !== false, locked: !!p.locked, tracks: [] };
+    const pm = { A: p.A, B: p.B, loopOn: p.loopOn !== false, locked: !!p.locked, tempoPct: p.tempoPct || 0, semi: p.semi || 0, tracks: [] };
     for (const sl of p.slots){
       if (!hasContent(sl)){ pm.tracks.push({ empty: true, vol: sl.vol }); continue; }
       const src = slotSrc(sl);
@@ -2693,7 +2716,8 @@ async function importSessionFile(file){
     let n = 0;
     for (const k of PARTS){
       const pm = srcParts[k];
-      const ps = { A: null, B: null, loopOn: true, locked: false, slots: [] };
+      const ps = { A: null, B: null, loopOn: true, locked: false, slots: [],
+                   tempoPct: fxVal(pm && pm.tempoPct, meta.tempoPct, -50, 50), semi: fxVal(pm && pm.semi, meta.semi, -7, 7) };
       if (pm){
         ps.A = pm.A != null ? pm.A : null; ps.B = pm.B != null ? pm.B : null; ps.loopOn = pm.loopOn !== false; ps.locked = !!pm.locked;
         for (const t of (pm.tracks || [])){
@@ -3043,8 +3067,8 @@ async function doBounce(kind){
   const nameParts = [sm ? sm.name : 'Looper ' + hhmm()];
   if (kind === 'seq') nameParts.push('sekwencja');
   else nameParts.push('część ' + curPart + (onlyLoop && loopActive() ? ' pętla' : ''));
-  if (tempoPct) nameParts.push('tempo ' + (tempoPct > 0 ? '+' : '') + tempoPct + '%');
-  if (semi) nameParts.push((semi > 0 ? '+' : '') + semi + ' pt');
+  if (kind !== 'seq' && tempoPct) nameParts.push('tempo ' + (tempoPct > 0 ? '+' : '') + tempoPct + '%');
+  if (kind !== 'seq' && semi) nameParts.push((semi > 0 ? '+' : '') + semi + ' pt');
   bounceName = safeName(nameParts.join(' ')) + '.mp3';
   let worker;
   try { worker = new Worker('mp3-worker.js'); } catch (e) { say('Ta przeglądarka nie pozwala tu zgrać MP3.', true); bounceUI('closed'); return; }
@@ -3164,13 +3188,13 @@ $('wipe').addEventListener('click', () => {
   resetRuntime();
   for (const s of allSlots()) if (curSid != null) DB.del(dKey(curSid, s.id)).catch(() => {});
   initParts(); sequence = [{ p: 'A', n: 1 }]; playMode = 'part';
-  setTempo(0); setSemi(0);
+  syncFx();
   lastSig = ''; lastMixSig = ''; lastDotSig = '';
   updateCanvasHeight(); resetView(); ui(); scheduleSave(true);
   say('Sesja wyczyszczona.');
 });
 
-function fxChanged(delay){ markAllDirty(); scheduleRender(delay); }
+function fxChanged(delay){ scheduleRender(delay); }
 const tempoEl = $('tempo'), semiEl = $('semi');
 tempoEl.addEventListener('input', () => setTempo(+tempoEl.value));
 tempoEl.addEventListener('change', () => { setTempo(+tempoEl.value); fxChanged(120); });
